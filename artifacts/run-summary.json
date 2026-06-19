@@ -1,0 +1,57 @@
+{
+  "ts": "2026-06-19T23:08:54.286Z",
+  "rubric_source": "done.rubric.json",
+  "tickers": [
+    "NVDA",
+    "MSFT",
+    "GOOGL"
+  ],
+  "results": [
+    {
+      "ticker": "NVDA",
+      "verdict": "GREEN",
+      "forwardPE": 23.5142,
+      "cagr_pct": 33.4627,
+      "forwardPEG": 0.7027,
+      "vendor_pegTTM": 0.62493,
+      "critical_red": [],
+      "required_red": [],
+      "g1_demo": {
+        "refused": true,
+        "restored": true
+      },
+      "fail_artifacts": 1
+    },
+    {
+      "ticker": "MSFT",
+      "verdict": "GREEN",
+      "forwardPE": 23.8167,
+      "cagr_pct": 16.8213,
+      "forwardPEG": 1.4159,
+      "vendor_pegTTM": 1.5835,
+      "critical_red": [],
+      "required_red": [],
+      "g1_demo": {
+        "refused": true,
+        "restored": true
+      },
+      "fail_artifacts": 1
+    },
+    {
+      "ticker": "GOOGL",
+      "verdict": "GREEN",
+      "forwardPE": 25.8804,
+      "cagr_pct": 1.6737,
+      "forwardPEG": 15.463,
+      "vendor_pegTTM": 1.71989,
+      "critical_red": [],
+      "required_red": [],
+      "g1_demo": {
+        "refused": true,
+        "restored": true
+      },
+      "fail_artifacts": 1
+    }
+  ],
+  "overall_verdict": "GREEN"
+}

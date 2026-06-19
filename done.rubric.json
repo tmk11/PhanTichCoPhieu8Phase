@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "description": "Tiêu chí 'thế nào là xong' cho pipeline phân tích cổ phiếu 8-phase. DONE = mọi tiêu chí required xanh VÀ không tiêu chí critical nào đỏ.",
+  "rounding_tolerance": {
+    "forward_pe_abs": 0.05,
+    "peg_abs": 0.02,
+    "note": "Verifier tự tính lại; lệch quá ngưỡng này so với số báo cáo => FAIL (G7)."
+  },
+  "peg_vendor_match_epsilon": 0.03,
+  "criteria": [
+    { "id": "every_number_sourced",   "required": true,  "critical": true,  "guard": "G4", "meaning": "Mọi số có nguồn {value,source,url,as_of_date,field} hoặc đánh dấu GAP; không có số trần." },
+    { "id": "peg_computed_manually",  "required": true,  "critical": true,  "guard": "G1", "meaning": "PEG = forward_P/E ÷ growth%% tính tay; KHÔNG trùng trường pegTTM/forwardPEG dựng sẵn của vendor." },
+    { "id": "recompute_matches",      "required": true,  "critical": true,  "guard": "G7", "meaning": "Verifier tự tính lại forward P/E & PEG từ canonical khớp số báo cáo trong ngưỡng làm tròn." },
+    { "id": "cyclical_guard_present", "required": true,  "critical": true,  "guard": "G2", "meaning": "Ticker chu kỳ phải kèm cảnh báo 'P/E thấp ở đỉnh chu kỳ = bẫy'." },
+    { "id": "loss_to_profit_flagged", "required": true,  "critical": true,  "guard": "G3", "meaning": "Nền lỗ/lãi-gần-0 (base EPS thấp) làm tăng trưởng méo phải được đánh dấu." },
+    { "id": "tam_section_nonempty",   "required": true,  "critical": false, "guard": "G5", "meaning": "Có phần growth-runway/TAM với động cơ tăng trưởng, backlog/RPO, segment, rủi ro." },
+    { "id": "fcf_caveat",             "required": true,  "critical": false, "guard": "G6", "meaning": "FCF âm phải có caveat (FCF dương => pass hiển nhiên)." },
+    { "id": "not_advice_framing",     "required": true,  "critical": false, "guard": "G8", "meaning": "Có khung 'tham khảo, không phải lời khuyên'." },
+    { "id": "fail_revise_pass",       "required": true,  "critical": false, "guard": "LOOP", "meaning": "Có >=1 bản verifier FAIL được lưu (bằng chứng tự bắt lỗi)." },
+    { "id": "g1_demo_refused",        "required": true,  "critical": false, "guard": "G1-DEMO", "meaning": "Màn corrupt->refuse->restore chạy đúng." },
+    { "id": "rerunnable",             "required": true,  "critical": false, "guard": "RECORD", "meaning": "Có run-log tái lập được." }
+  ]
+}

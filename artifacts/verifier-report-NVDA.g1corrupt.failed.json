@@ -1,0 +1,68 @@
+{
+  "ticker": "NVDA",
+  "as_of": "2026-06-19",
+  "tag": "g1corrupt",
+  "ts": "2026-06-19T23:08:54.276Z",
+  "recompute": {
+    "forwardPE_headline": 23.5142,
+    "fy": 2027,
+    "cagr_pct": 33.4627,
+    "pegForward": 0.7027,
+    "vendor_pegTTM": 0.62493
+  },
+  "checks": [
+    {
+      "id": "G4_cite_or_gap",
+      "critical": true,
+      "status": "pass",
+      "detail": "Mọi node có provenance hoặc GAP tường minh; input tiêu đề đủ nguồn."
+    },
+    {
+      "id": "G7_recompute_matches",
+      "critical": true,
+      "status": "fail",
+      "detail": "PEG spec=0.62493 vs recompute=0.7027 (Δ=0.0778 > 0.02)"
+    },
+    {
+      "id": "G1_peg_manual",
+      "critical": true,
+      "status": "fail",
+      "detail": "PEG spec=0.62493 TRÙNG vendor pegTTM=0.62493 (Δ<=0.03) ⇒ nghi dùng số dựng sẵn"
+    },
+    {
+      "id": "G2_cyclical_guard",
+      "critical": true,
+      "status": "pass",
+      "detail": "Có cảnh báo chu kỳ + bẫy P/E đỉnh."
+    },
+    {
+      "id": "G3_loss_to_profit",
+      "critical": true,
+      "status": "pass",
+      "detail": "Đã đánh dấu nền lỗ/lãi-gần-0 làm tăng trưởng méo."
+    },
+    {
+      "id": "G5_tam_section",
+      "critical": false,
+      "status": "pass",
+      "detail": "Phần growth-runway/TAM đầy đủ (động cơ, backlog/RPO, segment, rủi ro)."
+    },
+    {
+      "id": "G6_fcf_caveat",
+      "critical": false,
+      "status": "pass",
+      "detail": "FCF dương (hoặc GAP) ⇒ pass."
+    },
+    {
+      "id": "G8_not_advice",
+      "critical": false,
+      "status": "pass",
+      "detail": "Có khung tham khảo."
+    }
+  ],
+  "summary": {
+    "critical_fail": 2,
+    "total_fail": 2,
+    "verdict": "fail"
+  }
+}

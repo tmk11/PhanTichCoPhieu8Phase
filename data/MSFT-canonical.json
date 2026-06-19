@@ -1,0 +1,67 @@
+{
+  "ticker": "MSFT",
+  "as_of": "2026-06-19",
+  "meta": {
+    "company": "Microsoft Corporation",
+    "sector": "Software / Cloud",
+    "fiscal_year_end_month": 6,
+    "fiscal_year_note": "Năm tài chính MSFT kết thúc 30/06 (vd FY2025 kết thúc 30/06/2025; FY2026 đang kết thúc ~hiện tại).",
+    "currency": "USD",
+    "cyclical": false,
+    "cyclical_reason": "Phần mềm/đám mây có tính tăng trưởng thế tục (secular), không thuộc nhóm chu kỳ bán dẫn/hàng hóa. Rủi ro chính là chu kỳ capex AI, không phải chu kỳ hàng hóa.",
+    "eps_basis_note": "EPS TTM & quá khứ GAAP diluted (Finnhub). Forward EPS consensus thường non-GAAP => caveat so sánh."
+  },
+  "price": { "value": 379.40, "source": "Finnhub MCP get_quote", "url": "https://finnhub.io/docs/api/quote", "as_of_date": "2026-06-18", "field": "c", "tier": "data_vendor" },
+
+  "eps_ttm": { "value": 16.7896, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "epsTTM", "tier": "data_vendor", "note": "GAAP diluted TTM." },
+
+  "peg_ttm_vendor": { "value": 1.5835, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "pegTTM", "tier": "data_vendor", "DO_NOT_USE_FOR_COMPUTE": true, "note": "Trường PEG dựng sẵn vendor. CẤM dùng tính PEG tiêu đề (G1)." },
+
+  "pe_ttm_vendor": { "value": 22.5079, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "peTTM", "tier": "data_vendor" },
+
+  "eps_actual": [
+    { "fy": 2025, "period": "2025-06-30", "value": 13.6413, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor", "note": "GAAP diluted." },
+    { "fy": 2024, "period": "2024-06-30", "value": 11.8002, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor" },
+    { "fy": 2023, "period": "2023-06-30", "value": 9.6843, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor" }
+  ],
+
+  "eps_forward": [
+    { "fy": 2026, "value": 15.93, "analyst_count": null, "source": "Investing.com analysis (consensus, non-GAAP)", "url": "https://www.investing.com/analysis/microsoft-valuation-looks-disconnected-from-growth-margins-and-cash-flow-200677270", "as_of_date": "2026-06", "field": "eps_estimate", "tier": "news", "note": "Độ vênh: KeyCorp ~15.64 (https://www.marketbeat.com/instant-alerts/analysts-offer-predictions-for-microsoft-fy2026-earnings-2025-08-04). Khoảng FY2026 ~15.6–15.9." },
+    { "fy": 2027, "value": 18.61, "analyst_count": null, "source": "Investing.com analysis (consensus, non-GAAP)", "url": "https://www.investing.com/analysis/microsoft-valuation-looks-disconnected-from-growth-margins-and-cash-flow-200677270", "as_of_date": "2026-06", "field": "eps_estimate", "tier": "news", "note": "Độ vênh: Simply Wall St ~19.4 (https://simplywall.st/stocks/us/software/nasdaq-msft/microsoft/future). Khoảng FY2027 ~18.6–19.4." },
+    { "fy": 2028, "value": 21.74, "analyst_count": null, "source": "Investing.com analysis (consensus, non-GAAP)", "url": "https://www.investing.com/analysis/microsoft-valuation-looks-disconnected-from-growth-margins-and-cash-flow-200677270", "as_of_date": "2026-06", "field": "eps_estimate", "tier": "news" },
+    { "fy": 2029, "value": "GAP", "reason": "Không có consensus đáng tin cho FY2029 từ nguồn mở tại thời điểm chạy.", "tier": "gap" }
+  ],
+
+  "revenue_forward": [
+    { "fy": 2026, "value": "GAP", "reason": "Chưa lấy được revenue estimate FY2026 sạch nguồn (Alpha Vantage hết hạn mức ngày, stockanalysis/chartmill chặn bot). Không bịa.", "tier": "gap" }
+  ],
+
+  "fcf": { "value": 25700000000, "source": "Microsoft Q1 FY2026 earnings (Futurum tổng hợp 8-K)", "url": "https://futurumgroup.com/insights/microsoft-q1-fy-2026-cloud-and-ai-fuel-broad-based-growth/", "as_of_date": "2025-10", "field": "free_cash_flow_Q1FY2026", "tier": "filing", "note": "FCF Q1 FY2026 +25.7 tỷ USD (+33% YoY) — DƯƠNG; con số quý, FCF cả năm cao hơn nhiều." },
+
+  "fundamentals_aux": {
+    "beta": { "value": 1.1310923, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "beta", "tier": "data_vendor", "note": "Không dùng để sàng lọc tăng trưởng." }
+  },
+
+  "growth_runway": {
+    "drivers": [
+      { "text": "Azure & cloud là động cơ chính: Azure +40% (constant currency) trong Q1 FY2026; Microsoft Cloud tăng trưởng diện rộng, biên lợi nhuận mở rộng.", "source": "Futurum – Microsoft Q1 FY2026", "url": "https://futurumgroup.com/insights/microsoft-q1-fy-2026-cloud-and-ai-fuel-broad-based-growth/", "as_of_date": "2025-10", "tier": "news" }
+    ],
+    "backlog_rpo": { "text": "Commercial RPO (remaining performance obligation) ~625 tỷ USD ở Q2 FY2026 (+110% YoY), thời hạn bình quân ~2.5 năm; ~25% ghi nhận trong 12 tháng tới. ~45% RPO đến từ OpenAI; phần còn lại +28% YoY (nhu cầu khách hàng diện rộng).", "source": "Microsoft FY2026 Q2 earnings call", "url": "https://www.microsoft.com/en-us/investor/events/fy-2026/earnings-fy-2026-q2", "as_of_date": "2026-01", "tier": "filing" },
+    "tam": { "text": "TAM phần mềm doanh nghiệp + đám mây + AI (Copilot, Azure AI, M365, security, gaming) rất lớn và còn dư địa; AI monetization là đòn bẩy biên lợi nhuận.", "source": "Investing.com analysis", "url": "https://www.investing.com/analysis/microsoft-valuation-looks-disconnected-from-growth-margins-and-cash-flow-200677270", "as_of_date": "2026-06", "tier": "news" },
+    "segments": [
+      { "text": "Intelligent Cloud (Azure), Productivity & Business Processes (M365, LinkedIn), More Personal Computing (Windows, gaming/Activision, search).", "source": "Futurum – Microsoft Q1 FY2026", "url": "https://futurumgroup.com/insights/microsoft-q1-fy-2026-cloud-and-ai-fuel-broad-based-growth/", "as_of_date": "2025-10", "tier": "news" }
+    ],
+    "risks": [
+      "Capex AI khổng lồ => rủi ro nén FCF và ROIC nếu nhu cầu AI hạ nhiệt.",
+      "Tập trung RPO vào OpenAI (~45%) => rủi ro đối tác đơn lẻ.",
+      "Cạnh tranh đám mây (AWS, Google Cloud) và rủi ro pháp lý/chống độc quyền.",
+      "Optionality: Copilot/AI monetization, security, gaming."
+    ]
+  },
+
+  "gaps": [
+    "Forward EPS FY2026–FY2028 chỉ có nguồn news (Alpha Vantage hết hạn mức ngày) với độ vênh ~2–4% giữa các nguồn => độ tin cậy thấp hơn NVDA/GOOGL (data_vendor).",
+    "Revenue estimate forward: GAP.",
+    "Forward EPS FY2029: GAP."
+  ]
+}

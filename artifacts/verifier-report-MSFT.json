@@ -1,0 +1,68 @@
+{
+  "ticker": "MSFT",
+  "as_of": "2026-06-19",
+  "tag": "",
+  "ts": "2026-06-19T23:08:54.281Z",
+  "recompute": {
+    "forwardPE_headline": 23.8167,
+    "fy": 2026,
+    "cagr_pct": 16.8213,
+    "pegForward": 1.4159,
+    "vendor_pegTTM": 1.5835
+  },
+  "checks": [
+    {
+      "id": "G4_cite_or_gap",
+      "critical": true,
+      "status": "pass",
+      "detail": "Mọi node có provenance hoặc GAP tường minh; input tiêu đề đủ nguồn."
+    },
+    {
+      "id": "G7_recompute_matches",
+      "critical": true,
+      "status": "pass",
+      "detail": "forwardPE=23.8167, PEG=1.4159 khớp."
+    },
+    {
+      "id": "G1_peg_manual",
+      "critical": true,
+      "status": "pass",
+      "detail": "PEG tay=1.4159 ≠ vendor pegTTM=1.5835."
+    },
+    {
+      "id": "G2_cyclical_guard",
+      "critical": true,
+      "status": "pass",
+      "detail": "Không phải cyclical ⇒ n/a."
+    },
+    {
+      "id": "G3_loss_to_profit",
+      "critical": true,
+      "status": "pass",
+      "detail": "Không có nền lỗ/gần-0 ⇒ n/a."
+    },
+    {
+      "id": "G5_tam_section",
+      "critical": false,
+      "status": "pass",
+      "detail": "Phần growth-runway/TAM đầy đủ (động cơ, backlog/RPO, segment, rủi ro)."
+    },
+    {
+      "id": "G6_fcf_caveat",
+      "critical": false,
+      "status": "pass",
+      "detail": "FCF dương (hoặc GAP) ⇒ pass."
+    },
+    {
+      "id": "G8_not_advice",
+      "critical": false,
+      "status": "pass",
+      "detail": "Có khung tham khảo."
+    }
+  ],
+  "summary": {
+    "critical_fail": 0,
+    "total_fail": 0,
+    "verdict": "pass"
+  }
+}

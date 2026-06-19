@@ -1,0 +1,70 @@
+{
+  "ticker": "NVDA",
+  "as_of": "2026-06-19",
+  "meta": {
+    "company": "NVIDIA Corporation",
+    "sector": "Semiconductors",
+    "fiscal_year_end_month": 1,
+    "fiscal_year_note": "Năm tài chính NVDA kết thúc cuối tháng 1 (vd FY2026 kết thúc 25/01/2026).",
+    "currency": "USD",
+    "cyclical": true,
+    "cyclical_reason": "Ngành bán dẫn lịch sử có tính chu kỳ mạnh; doanh thu hiện phụ thuộc lớn vào chu kỳ capex AI/data center. P/E thấp khi lợi nhuận ở đỉnh chu kỳ có thể là bẫy.",
+    "eps_basis_note": "EPS TTM & EPS quá khứ là GAAP diluted (Finnhub, đã chỉnh split 10:1 06/2024). Forward EPS consensus thường là non-GAAP => so sánh forward P/E với trailing GAAP là khập khiễng (caveat)."
+  },
+  "price": { "value": 210.69, "source": "Finnhub MCP get_quote", "url": "https://finnhub.io/docs/api/quote", "as_of_date": "2026-06-18", "field": "c", "tier": "data_vendor" },
+
+  "eps_ttm": { "value": 6.53, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "epsTTM", "tier": "data_vendor", "note": "GAAP diluted TTM." },
+
+  "peg_ttm_vendor": { "value": 0.62493, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "pegTTM", "tier": "data_vendor", "DO_NOT_USE_FOR_COMPUTE": true, "note": "Trường PEG dựng sẵn của vendor. CẤM dùng để tính PEG tiêu đề (Guard G1). Chỉ giữ để verifier đối chứng 'không trùng'." },
+
+  "pe_ttm_vendor": { "value": 31.9441, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "peTTM", "tier": "data_vendor", "note": "P/E trailing vendor, đối chứng." },
+
+  "eps_actual": [
+    { "fy": 2026, "period": "2026-01-25", "value": 4.8979, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor", "note": "GAAP diluted, split-adjusted." },
+    { "fy": 2025, "period": "2025-01-26", "value": 2.9382, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor" },
+    { "fy": 2024, "period": "2024-01-28", "value": 1.1933, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor" },
+    { "fy": 2023, "period": "2023-01-29", "value": 0.1742, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor", "note": "Đáy chu kỳ FY2023 (EPS gần 0) => mọi CAGR tính từ năm này bị thổi phồng (Guard G3)." }
+  ],
+
+  "eps_forward": [
+    { "fy": 2027, "value": 8.9601, "analyst_count": 49, "eps_high": 9.85, "eps_low": 8.20, "source": "Alpha Vantage EARNINGS_ESTIMATES (consensus, non-GAAP)", "url": "https://www.alphavantage.co/documentation/#earnings-estimates", "as_of_date": "2026-06-19", "field": "eps_estimate_average", "tier": "data_vendor" },
+    { "fy": 2028, "value": 12.7272, "analyst_count": 49, "eps_high": 16.00, "eps_low": 9.65, "source": "Alpha Vantage EARNINGS_ESTIMATES (consensus, non-GAAP)", "url": "https://www.alphavantage.co/documentation/#earnings-estimates", "as_of_date": "2026-06-19", "field": "eps_estimate_average", "tier": "data_vendor" },
+    { "fy": 2029, "value": 15.96, "analyst_count": null, "eps_high": 20.83, "eps_low": 12.29, "source": "Simply Wall St forecast (consensus)", "url": "https://simplywall.st/stocks/us/semiconductors/nasdaq-nvda/nvidia/future", "as_of_date": "2026-06", "field": "eps_forecast", "tier": "news", "note": "Độ vênh: 24/7 Wall St mô hình FY2029 ~12.85 (https://247wallst.com/investing/2026/03/07/can-nvidia-shares-hit-500-by-2030/). Khoảng FY2029 ~12.85–15.96." },
+    { "fy": 2030, "value": "GAP", "reason": "Không có consensus đáng tin cho FY2030 (>4 năm); tránh bịa.", "tier": "gap" }
+  ],
+
+  "revenue_forward": [
+    { "fy": 2027, "value": 391655179920, "analyst_count": 52, "source": "Alpha Vantage EARNINGS_ESTIMATES", "url": "https://www.alphavantage.co/documentation/#earnings-estimates", "as_of_date": "2026-06-19", "field": "revenue_estimate_average", "tier": "data_vendor" },
+    { "fy": 2028, "value": 551664426650, "analyst_count": 55, "source": "Alpha Vantage EARNINGS_ESTIMATES", "url": "https://www.alphavantage.co/documentation/#earnings-estimates", "as_of_date": "2026-06-19", "field": "revenue_estimate_average", "tier": "data_vendor" }
+  ],
+
+  "fcf": { "value": 96580000000, "source": "NVIDIA Newsroom – Financial Results for Q4 & Fiscal 2026", "url": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-fourth-quarter-and-fiscal-2026", "as_of_date": "2026-01-25", "field": "free_cash_flow_FY2026", "tier": "filing", "note": "FCF FY2026 ~ +96.58 tỷ USD (DƯƠNG mạnh)." },
+
+  "fundamentals_aux": {
+    "revenue_fy2026": { "value": 215940000000, "source": "NVIDIA Newsroom FY2026 results", "url": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-fourth-quarter-and-fiscal-2026", "as_of_date": "2026-01-25", "field": "revenue", "tier": "filing", "note": "+65% YoY từ 130.5 tỷ." },
+    "gross_margin_fy2026": { "value": 71.1, "source": "NVIDIA Newsroom FY2026 results", "url": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-fourth-quarter-and-fiscal-2026", "as_of_date": "2026-01-25", "field": "gaap_gross_margin_pct", "tier": "filing" },
+    "beta": { "value": 2.2391436, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "beta", "tier": "data_vendor", "note": "Beta đo biến động giá, KHÔNG dùng để sàng lọc tăng trưởng." }
+  },
+
+  "growth_runway": {
+    "drivers": [
+      { "text": "Data center là động cơ chính: Q4 FY2026 data center ~62.3 tỷ USD (+75% YoY); networking ~11 tỷ/quý (>3.5x YoY).", "source": "Futurum / NVIDIA newsroom", "url": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-fourth-quarter-and-fiscal-2026", "as_of_date": "2026-01-25", "tier": "filing" }
+    ],
+    "backlog_rpo": { "text": "NVIDIA công bố ~1.000 tỷ USD đơn đặt hàng (purchase orders) cho nền tảng Blackwell & Vera Rubin trải dài 2025–2027; Blackwell 'sold out' hết nửa đầu 2026.", "source": "Wolfe Research via AOL / NVIDIA commentary", "url": "https://www.aol.com/articles/wolfe-research-nvidia-1t-orders-111125629.html", "as_of_date": "2026-04", "tier": "news" },
+    "tam": { "text": "TAM data-center/AI accelerator ước tính hàng trăm tỷ USD/năm và mở rộng (AI training+inference, sovereign AI, networking). NVDA giữ vị thế thống lĩnh GPU AI.", "source": "Intellectia / phemex academy (tổng hợp)", "url": "https://intellectia.ai/blog/nvidia-stock-analysis-2026-ai-demand", "as_of_date": "2026", "tier": "news" },
+    "segments": [
+      { "text": "Data Center (chủ đạo, >88% doanh thu), Gaming, Professional Visualization, Automotive/Robotics (optionality dài hạn).", "source": "NVIDIA newsroom", "url": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-fourth-quarter-and-fiscal-2026", "as_of_date": "2026-01-25", "tier": "filing" }
+    ],
+    "risks": [
+      "Tập trung khách hàng (vài hyperscaler chiếm phần lớn doanh thu) => rủi ro cắt giảm capex.",
+      "Chu kỳ bán dẫn: nếu chi tiêu AI hạ nhiệt, lợi nhuận đỉnh có thể đảo chiều nhanh (bẫy P/E thấp).",
+      "Cạnh tranh (AMD, ASIC nội bộ của hyperscaler) và rủi ro địa chính trị/kiểm soát xuất khẩu sang Trung Quốc.",
+      "Optionality: phần mềm (CUDA), networking, robotics/AV có thể mở rộng TAM."
+    ]
+  },
+
+  "gaps": [
+    "Forward EPS FY2030 (>4 năm) không có consensus đáng tin => GAP.",
+    "FY2029 chỉ có nguồn news (Simply Wall St) với độ vênh lớn so với 24/7 Wall St => độ tin cậy thấp hơn FY2027/FY2028 (data_vendor)."
+  ]
+}

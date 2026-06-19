@@ -1,0 +1,86 @@
+{
+  "ticker": "NVDA",
+  "as_of": "2026-06-19",
+  "price": {
+    "value": 210.69,
+    "input": "price"
+  },
+  "forwardPE": [
+    {
+      "fy": 2027,
+      "eps": 8.9601,
+      "tier": "data_vendor",
+      "pe": 23.5142,
+      "input": "eps_forward fy2027 (data_vendor)"
+    },
+    {
+      "fy": 2028,
+      "eps": 12.7272,
+      "tier": "data_vendor",
+      "pe": 16.5543,
+      "input": "eps_forward fy2028 (data_vendor)"
+    },
+    {
+      "fy": 2029,
+      "eps": 15.96,
+      "tier": "news",
+      "pe": 13.2011,
+      "input": "eps_forward fy2029 (news)"
+    }
+  ],
+  "headline": {
+    "fy": 2027,
+    "forwardPE": 23.5142,
+    "eps": 8.9601,
+    "eps_tier": "data_vendor"
+  },
+  "growth": {
+    "method": "CAGR forward EPS toàn cửa sổ có số",
+    "base_fy": 2027,
+    "end_fy": 2029,
+    "base_eps": 8.9601,
+    "end_eps": 15.96,
+    "years": 2,
+    "cagr_pct": 33.4627,
+    "furthest_tier": "news",
+    "yoy": [
+      {
+        "fy": 2028,
+        "growth_pct": 42.04
+      },
+      {
+        "fy": 2029,
+        "growth_pct": 25.4
+      }
+    ],
+    "vendor_only": {
+      "cagr_pct": 42.0431,
+      "peg": 0.5593,
+      "base_fy": 2027,
+      "end_fy": 2028
+    }
+  },
+  "pegForward": {
+    "value": 0.7027,
+    "method": "manual",
+    "formula": "forwardPE(FY2027=23.5142) / growth%(33.4627)",
+    "forwardPE_used": 23.5142,
+    "growth_pct_used": 33.4627,
+    "inputs": [
+      "price",
+      "eps_forward fy2027",
+      "eps_forward fy2029"
+    ]
+  },
+  "flags": {
+    "cyclical": true,
+    "loss_to_profit_applicable": true,
+    "loss_to_profit_reason": "min(EPS quá khứ)=0.1742 <= 0.5 => CAGR/growth lịch sử bị thổi phồng; PEG trailing & growth quá khứ méo.",
+    "fcf_negative": false,
+    "peg_unreliable_low_growth": false,
+    "horizon_gap": true,
+    "numeric_forward_years": 3,
+    "horizon_target_years": 4
+  },
+  "peg_vendor_for_compare": 0.62493
+}

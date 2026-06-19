@@ -1,0 +1,66 @@
+{
+  "ticker": "GOOGL",
+  "as_of": "2026-06-19",
+  "meta": {
+    "company": "Alphabet Inc. (Class A)",
+    "sector": "Communication Services / Internet",
+    "fiscal_year_end_month": 12,
+    "fiscal_year_note": "Năm tài chính Alphabet kết thúc 31/12 (vd FY2025 đã kết thúc 31/12/2025).",
+    "currency": "USD",
+    "cyclical": false,
+    "cyclical_reason": "Quảng cáo + đám mây có tính tăng trưởng thế tục; có nhạy cảm nhẹ với chu kỳ chi tiêu quảng cáo (mild ad-cyclicality) nhưng KHÔNG thuộc nhóm chu kỳ bán dẫn/hàng hóa.",
+    "eps_basis_note": "EPS TTM & quá khứ GAAP diluted (Finnhub). Forward EPS consensus có thể non-GAAP => caveat so sánh."
+  },
+  "price": { "value": 368.03, "source": "Finnhub MCP get_quote", "url": "https://finnhub.io/docs/api/quote", "as_of_date": "2026-06-18", "field": "c", "tier": "data_vendor" },
+
+  "eps_ttm": { "value": 13.1086, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "epsTTM", "tier": "data_vendor", "note": "GAAP diluted TTM." },
+
+  "peg_ttm_vendor": { "value": 1.71989, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "pegTTM", "tier": "data_vendor", "DO_NOT_USE_FOR_COMPUTE": true, "note": "Trường PEG dựng sẵn vendor. CẤM dùng tính PEG tiêu đề (G1)." },
+
+  "pe_ttm_vendor": { "value": 27.9674, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "peTTM", "tier": "data_vendor" },
+
+  "eps_actual": [
+    { "fy": 2025, "period": "2025-12-31", "value": 10.807, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor", "note": "GAAP diluted." },
+    { "fy": 2024, "period": "2024-12-31", "value": 8.0435, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor" },
+    { "fy": 2023, "period": "2023-12-31", "value": 5.8428, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor" }
+  ],
+
+  "eps_forward": [
+    { "fy": 2026, "value": 14.2204, "analyst_count": 53, "eps_high": 15.13, "eps_low": 12.79, "source": "Alpha Vantage EARNINGS_ESTIMATES (consensus)", "url": "https://www.alphavantage.co/documentation/#earnings-estimates", "as_of_date": "2026-06-19", "field": "eps_estimate_average", "tier": "data_vendor" },
+    { "fy": 2027, "value": 14.4584, "analyst_count": 55, "eps_high": 17.18, "eps_low": 11.70, "source": "Alpha Vantage EARNINGS_ESTIMATES (consensus)", "url": "https://www.alphavantage.co/documentation/#earnings-estimates", "as_of_date": "2026-06-19", "field": "eps_estimate_average", "tier": "data_vendor", "note": "CẢNH BÁO: consensus FY2026->FY2027 gần như đi ngang (+1.7%), nhiều khả năng do capex/khấu hao AI nén EPS gần hạn => forward PEG ngắn hạn bị méo cao bất thường (xem caveat)." }
+  ],
+
+  "revenue_forward": [
+    { "fy": 2026, "value": 487719900330, "analyst_count": 52, "source": "Alpha Vantage EARNINGS_ESTIMATES", "url": "https://www.alphavantage.co/documentation/#earnings-estimates", "as_of_date": "2026-06-19", "field": "revenue_estimate_average", "tier": "data_vendor" },
+    { "fy": 2027, "value": 578906988870, "analyst_count": 53, "source": "Alpha Vantage EARNINGS_ESTIMATES", "url": "https://www.alphavantage.co/documentation/#earnings-estimates", "as_of_date": "2026-06-19", "field": "revenue_estimate_average", "tier": "data_vendor" }
+  ],
+
+  "fcf": { "value": 73300000000, "source": "Alphabet FY2025 results (qua TIKR/heygotrade tổng hợp 8-K)", "url": "https://www.sec.gov/Archives/edgar/data/0001652044/000165204426000043/googexhibit991q12026.htm", "as_of_date": "2025-12-31", "field": "free_cash_flow_FY2025", "tier": "filing", "note": "FCF FY2025 ~ +73.3 tỷ USD (DƯƠNG). CẢNH BÁO: FCF 2026 dự kiến nén mạnh xuống ~20.5 tỷ do capex AI ~185 tỷ => caveat optionality/ROIC." },
+
+  "fundamentals_aux": {
+    "cloud_operating_income_fy2025": { "value": 13910000000, "source": "Alphabet FY2025 8-K", "url": "https://www.sec.gov/Archives/edgar/data/0001652044/000165204425000087/googexhibit991q32025.htm", "as_of_date": "2025-12-31", "field": "google_cloud_operating_income", "tier": "filing" },
+    "beta": { "value": 1.2442911, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "beta", "tier": "data_vendor", "note": "Không dùng để sàng lọc tăng trưởng." }
+  },
+
+  "growth_runway": {
+    "drivers": [
+      { "text": "Google Cloud bứt tốc: doanh thu Q1 2026 ~20 tỷ USD (+63% YoY); biên lợi nhuận hoạt động Cloud nhảy từ 17.8% lên 32.9% trong một năm; Cloud operating income Q1 2026 gấp 3 lần YoY (~6.6 tỷ).", "source": "TIKR / Alphabet Q1 2026 8-K", "url": "https://www.sec.gov/Archives/edgar/data/0001652044/000165204426000043/googexhibit991q12026.htm", "as_of_date": "2026-03-31", "tier": "filing" }
+    ],
+    "backlog_rpo": { "text": "Backlog Google Cloud ~462 tỷ USD cuối Q1 2026 (từ ~240 tỷ cuối Q4 2025); >50% dự kiến chuyển thành doanh thu trong 24 tháng (>230 tỷ ghi nhận tới giữa 2028).", "source": "TIKR – Google Cloud backlog", "url": "https://www.tikr.com/blog/google-cloud-just-crossed-462-billion-in-backlog-heres-what-it-means-for-googl", "as_of_date": "2026-03-31", "tier": "news" },
+    "tam": { "text": "TAM: Search/quảng cáo số, YouTube, Cloud/AI (Gemini), Waymo (AV optionality). AI vừa là cơ hội (Gemini, Cloud AI) vừa là rủi ro đối với Search truyền thống.", "source": "heygotrade – Alphabet Q1 2026", "url": "https://www.heygotrade.com/en/blog/alphabet-q1-2026-earnings-reaction/", "as_of_date": "2026-04", "tier": "news" },
+    "segments": [
+      { "text": "Google Services (Search, YouTube, ads) – operating income FY2025 ~139.4 tỷ USD; Google Cloud – operating income FY2025 ~13.9 tỷ; Other Bets (Waymo...).", "source": "Alphabet FY2025 8-K", "url": "https://www.sec.gov/Archives/edgar/data/0001652044/000165204425000087/googexhibit991q32025.htm", "as_of_date": "2025-12-31", "tier": "filing" }
+    ],
+    "risks": [
+      "Capex AI rất lớn (~185 tỷ 2026) nén FCF gần hạn (FCF 2026 dự kiến ~20.5 tỷ) => rủi ro ROIC.",
+      "Disruption của AI/chatbot đối với Search quảng cáo cốt lõi.",
+      "Rủi ro pháp lý/chống độc quyền (DOJ) có thể buộc thoái vốn mảng.",
+      "Optionality: Gemini, Cloud margin expansion, Waymo."
+    ]
+  },
+
+  "gaps": [
+    "Forward EPS chỉ tới FY2027 (2 năm data_vendor); FY2028–FY2029 không có consensus đáng tin => GAP (khung 4 năm KHÔNG được lấp đủ).",
+    "Consensus FY2026->FY2027 đi ngang bất thường (+1.7%) => forward PEG ngắn hạn không đáng tin (caveat G3-styleméo tăng trưởng do capex)."
+  ]
+}
