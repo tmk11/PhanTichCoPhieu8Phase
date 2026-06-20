@@ -70,9 +70,11 @@ export function build(ticker) {
   }
   // FCF caveat (G6)
   if (d.flags.fcf_negative) {
-    M.push(`- 🔴 **FCF ÂM:** ${money(c.fcf.value)} (${c.fcf.source}, ${c.fcf.as_of_date}) — định giá dựa trên lợi nhuận cần thận trọng khi dòng tiền tự do âm.`);
-  } else if (c.fcf) {
+    M.push(`- 🔴 **FCF ÂM:** ${money(c.fcf.value)} (${c.fcf.source}, ${c.fcf.as_of_date}) — định giá dựa trên lợi nhuận cần thận trọng khi dòng tiền tự do âm.${c.fcf.note ? " " + c.fcf.note : ""}`);
+  } else if (c.fcf && typeof c.fcf.value === "number") {
     M.push(`- 🟢 **FCF dương:** ${money(c.fcf.value)} (${c.fcf.field}; ${c.fcf.source}, ${c.fcf.as_of_date}).${c.fcf.note ? " " + c.fcf.note : ""}`);
+  } else if (c.fcf) {
+    M.push(`- ⚪ **FCF (chưa chốt nguồn tuyệt đối):** ${c.fcf.reason || c.fcf.note || "GAP"} (${c.fcf.source || "—"}).`);
   }
   M.push(`- ⚪ **GAAP vs non-GAAP:** EPS TTM/quá khứ là GAAP; forward consensus thường non-GAAP ⇒ forward P/E so với trailing là khập khiễng.`);
   // Độ vênh nguồn

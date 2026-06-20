@@ -1,10 +1,12 @@
 {
-  "ts": "2026-06-19T23:08:54.286Z",
+  "ts": "2026-06-20T06:31:41.950Z",
   "rubric_source": "done.rubric.json",
   "tickers": [
     "NVDA",
     "MSFT",
-    "GOOGL"
+    "GOOGL",
+    "ORCL",
+    "AFRM"
   ],
   "results": [
     {
@@ -44,6 +46,36 @@
       "cagr_pct": 1.6737,
       "forwardPEG": 15.463,
       "vendor_pegTTM": 1.71989,
+      "critical_red": [],
+      "required_red": [],
+      "g1_demo": {
+        "refused": true,
+        "restored": true
+      },
+      "fail_artifacts": 1
+    },
+    {
+      "ticker": "ORCL",
+      "verdict": "GREEN",
+      "forwardPE": 22.9442,
+      "cagr_pct": 35.4926,
+      "forwardPEG": 0.6465,
+      "vendor_pegTTM": 1.83719,
+      "critical_red": [],
+      "required_red": [],
+      "g1_demo": {
+        "refused": true,
+        "restored": true
+      },
+      "fail_artifacts": 1
+    },
+    {
+      "ticker": "AFRM",
+      "verdict": "GREEN",
+      "forwardPE": 23.8244,
+      "cagr_pct": 21.7295,
+      "forwardPEG": 1.0964,
+      "vendor_pegTTM": 34.36739,
       "critical_red": [],
       "required_red": [],
       "g1_demo": {

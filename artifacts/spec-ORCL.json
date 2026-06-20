@@ -1,0 +1,75 @@
+{
+  "ticker": "ORCL",
+  "as_of": "2026-06-19",
+  "price": {
+    "value": 184.29,
+    "input": "price"
+  },
+  "forwardPE": [
+    {
+      "fy": 2027,
+      "eps": 8.0321,
+      "tier": "data_vendor",
+      "pe": 22.9442,
+      "input": "eps_forward fy2027 (data_vendor)"
+    },
+    {
+      "fy": 2028,
+      "eps": 10.8829,
+      "tier": "data_vendor",
+      "pe": 16.9339,
+      "input": "eps_forward fy2028 (data_vendor)"
+    }
+  ],
+  "headline": {
+    "fy": 2027,
+    "forwardPE": 22.9442,
+    "eps": 8.0321,
+    "eps_tier": "data_vendor"
+  },
+  "growth": {
+    "method": "CAGR forward EPS toàn cửa sổ có số",
+    "base_fy": 2027,
+    "end_fy": 2028,
+    "base_eps": 8.0321,
+    "end_eps": 10.8829,
+    "years": 1,
+    "cagr_pct": 35.4926,
+    "furthest_tier": "data_vendor",
+    "yoy": [
+      {
+        "fy": 2028,
+        "growth_pct": 35.49
+      }
+    ],
+    "vendor_only": {
+      "cagr_pct": 35.4926,
+      "peg": 0.6465,
+      "base_fy": 2027,
+      "end_fy": 2028
+    }
+  },
+  "pegForward": {
+    "value": 0.6465,
+    "method": "manual",
+    "formula": "forwardPE(FY2027=22.9442) / growth%(35.4926)",
+    "forwardPE_used": 22.9442,
+    "growth_pct_used": 35.4926,
+    "inputs": [
+      "price",
+      "eps_forward fy2027",
+      "eps_forward fy2028"
+    ]
+  },
+  "flags": {
+    "cyclical": false,
+    "loss_to_profit_applicable": false,
+    "loss_to_profit_reason": null,
+    "fcf_negative": true,
+    "peg_unreliable_low_growth": false,
+    "horizon_gap": true,
+    "numeric_forward_years": 2,
+    "horizon_target_years": 4
+  },
+  "peg_vendor_for_compare": 1.83719
+}

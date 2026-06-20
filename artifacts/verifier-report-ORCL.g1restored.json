@@ -1,14 +1,14 @@
 {
-  "ticker": "GOOGL",
+  "ticker": "ORCL",
   "as_of": "2026-06-19",
-  "tag": "",
-  "ts": "2026-06-20T06:31:41.941Z",
+  "tag": "g1restored",
+  "ts": "2026-06-20T06:31:41.946Z",
   "recompute": {
-    "forwardPE_headline": 25.8804,
-    "fy": 2026,
-    "cagr_pct": 1.6737,
-    "pegForward": 15.463,
-    "vendor_pegTTM": 1.71989
+    "forwardPE_headline": 22.9442,
+    "fy": 2027,
+    "cagr_pct": 35.4926,
+    "pegForward": 0.6465,
+    "vendor_pegTTM": 1.83719
   },
   "checks": [
     {
@@ -21,13 +21,13 @@
       "id": "G7_recompute_matches",
       "critical": true,
       "status": "pass",
-      "detail": "forwardPE=25.8804, PEG=15.463 khớp."
+      "detail": "forwardPE=22.9442, PEG=0.6465 khớp."
     },
     {
       "id": "G1_peg_manual",
       "critical": true,
       "status": "pass",
-      "detail": "PEG tay=15.463 ≠ vendor pegTTM=1.71989."
+      "detail": "PEG tay=0.6465 ≠ vendor pegTTM=1.83719."
     },
     {
       "id": "G2_cyclical_guard",
@@ -51,7 +51,7 @@
       "id": "G6_fcf_caveat",
       "critical": false,
       "status": "pass",
-      "detail": "FCF dương (hoặc GAP) ⇒ pass."
+      "detail": "FCF âm có caveat."
     },
     {
       "id": "G8_not_advice",

@@ -1,0 +1,75 @@
+{
+  "ticker": "AFRM",
+  "as_of": "2026-06-19",
+  "price": {
+    "value": 73.92,
+    "input": "price"
+  },
+  "forwardPE": [
+    {
+      "fy": 2026,
+      "eps": 3.1027,
+      "tier": "data_vendor",
+      "pe": 23.8244,
+      "input": "eps_forward fy2026 (data_vendor)"
+    },
+    {
+      "fy": 2027,
+      "eps": 3.7769,
+      "tier": "data_vendor",
+      "pe": 19.5716,
+      "input": "eps_forward fy2027 (data_vendor)"
+    }
+  ],
+  "headline": {
+    "fy": 2026,
+    "forwardPE": 23.8244,
+    "eps": 3.1027,
+    "eps_tier": "data_vendor"
+  },
+  "growth": {
+    "method": "CAGR forward EPS toàn cửa sổ có số",
+    "base_fy": 2026,
+    "end_fy": 2027,
+    "base_eps": 3.1027,
+    "end_eps": 3.7769,
+    "years": 1,
+    "cagr_pct": 21.7295,
+    "furthest_tier": "data_vendor",
+    "yoy": [
+      {
+        "fy": 2027,
+        "growth_pct": 21.73
+      }
+    ],
+    "vendor_only": {
+      "cagr_pct": 21.7295,
+      "peg": 1.0964,
+      "base_fy": 2026,
+      "end_fy": 2027
+    }
+  },
+  "pegForward": {
+    "value": 1.0964,
+    "method": "manual",
+    "formula": "forwardPE(FY2026=23.8244) / growth%(21.7295)",
+    "forwardPE_used": 23.8244,
+    "growth_pct_used": 21.7295,
+    "inputs": [
+      "price",
+      "eps_forward fy2026",
+      "eps_forward fy2027"
+    ]
+  },
+  "flags": {
+    "cyclical": false,
+    "loss_to_profit_applicable": true,
+    "loss_to_profit_reason": "min(EPS quá khứ)=-3.3363 <= 0.5 => CAGR/growth lịch sử bị thổi phồng; PEG trailing & growth quá khứ méo.",
+    "fcf_negative": false,
+    "peg_unreliable_low_growth": false,
+    "horizon_gap": true,
+    "numeric_forward_years": 2,
+    "horizon_target_years": 4
+  },
+  "peg_vendor_for_compare": 34.36739
+}

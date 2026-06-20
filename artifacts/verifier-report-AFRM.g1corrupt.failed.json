@@ -1,14 +1,14 @@
 {
-  "ticker": "GOOGL",
+  "ticker": "AFRM",
   "as_of": "2026-06-19",
-  "tag": "",
-  "ts": "2026-06-20T06:31:41.941Z",
+  "tag": "g1corrupt",
+  "ts": "2026-06-20T06:31:41.949Z",
   "recompute": {
-    "forwardPE_headline": 25.8804,
+    "forwardPE_headline": 23.8244,
     "fy": 2026,
-    "cagr_pct": 1.6737,
-    "pegForward": 15.463,
-    "vendor_pegTTM": 1.71989
+    "cagr_pct": 21.7295,
+    "pegForward": 1.0964,
+    "vendor_pegTTM": 34.36739
   },
   "checks": [
     {
@@ -20,14 +20,14 @@
     {
       "id": "G7_recompute_matches",
       "critical": true,
-      "status": "pass",
-      "detail": "forwardPE=25.8804, PEG=15.463 khớp."
+      "status": "fail",
+      "detail": "PEG spec=34.36739 vs recompute=1.0964 (Δ=33.271 > 0.02)"
     },
     {
       "id": "G1_peg_manual",
       "critical": true,
-      "status": "pass",
-      "detail": "PEG tay=15.463 ≠ vendor pegTTM=1.71989."
+      "status": "fail",
+      "detail": "PEG spec=34.36739 TRÙNG vendor pegTTM=34.36739 (Δ<=0.03) ⇒ nghi dùng số dựng sẵn"
     },
     {
       "id": "G2_cyclical_guard",
@@ -39,7 +39,7 @@
       "id": "G3_loss_to_profit",
       "critical": true,
       "status": "pass",
-      "detail": "Không có nền lỗ/gần-0 ⇒ n/a."
+      "detail": "Đã đánh dấu nền lỗ/lãi-gần-0 làm tăng trưởng méo."
     },
     {
       "id": "G5_tam_section",
@@ -61,8 +61,8 @@
     }
   ],
   "summary": {
-    "critical_fail": 0,
-    "total_fail": 0,
-    "verdict": "pass"
+    "critical_fail": 2,
+    "total_fail": 2,
+    "verdict": "fail"
   }
 }

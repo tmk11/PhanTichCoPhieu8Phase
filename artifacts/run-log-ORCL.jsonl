@@ -1,0 +1,6 @@
+{"ts":"2026-06-20T06:31:41.943Z","ticker":"ORCL","phase":"RESEARCH","gate_pass":true,"nodes":17,"sources":["Alpha Vantage EARNINGS_ESTIMATES (consensus)","Finnhub MCP get_quote","Oracle FY2026 Q4 results (CNBC tổng hợp 8-K)"]}
+{"ts":"2026-06-20T06:31:41.943Z","ticker":"ORCL","phase":"INGEST","gate_pass":true}
+{"ts":"2026-06-20T06:31:41.944Z","ticker":"ORCL","phase":"DERIVE","gate_pass":true,"forwardPE":22.9442,"cagr_pct":35.4926,"peg":0.6465}
+{"ts":"2026-06-20T06:31:41.944Z","ticker":"ORCL","phase":"BUILD","gate_pass":true,"report":"reports/ORCL-analysis.md"}
+{"ts":"2026-06-20T06:31:41.945Z","ticker":"ORCL","phase":"VERIFY","gate_pass":true,"verdict":"pass","critical_fail":0}
+{"ts":"2026-06-20T06:31:41.946Z","ticker":"ORCL","phase":"LOOP","gate_pass":true,"iters":0,"g1demo":{"corrupt_refused":true,"restored_pass":true,"vendorPeg":1.83719}}

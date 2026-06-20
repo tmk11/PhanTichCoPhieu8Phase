@@ -1,0 +1,73 @@
+{
+  "ticker": "AFRM",
+  "as_of": "2026-06-19",
+  "meta": {
+    "company": "Affirm Holdings, Inc.",
+    "sector": "Fintech / BNPL (Buy-Now-Pay-Later)",
+    "fiscal_year_end_month": 6,
+    "fiscal_year_note": "Năm tài chính Affirm kết thúc 30/06 (vd FY2025 kết thúc 30/06/2025; FY2026 đang kết thúc ~hiện tại).",
+    "currency": "USD",
+    "cyclical": false,
+    "cyclical_reason": "Không thuộc nhóm chu kỳ bán dẫn/hàng hóa. NHƯNG nhạy cảm mạnh với CHU KỲ TÍN DỤNG TIÊU DÙNG (tổn thất nợ tăng khi suy thoái) và lãi suất — xem caveat. Không áp khung 'P/E thấp ở đỉnh = bẫy' vì công ty mới vừa có lãi.",
+    "eps_basis_note": "EPS TTM & quá khứ GAAP diluted (Finnhub). Forward EPS consensus có thể là non-GAAP/adjusted => ĐỘ VÊNH RẤT LỚN (xem dưới)."
+  },
+  "price": { "value": 73.92, "source": "Finnhub MCP get_quote", "url": "https://finnhub.io/docs/api/quote", "as_of_date": "2026-06-18", "field": "c", "tier": "data_vendor" },
+
+  "eps_ttm": { "value": 1.0715, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "epsTTM", "tier": "data_vendor", "note": "GAAP diluted TTM — vừa chuyển dương." },
+
+  "peg_ttm_vendor": { "value": 34.36739, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "pegTTM", "tier": "data_vendor", "DO_NOT_USE_FOR_COMPUTE": true, "note": "Trường PEG dựng sẵn vendor (méo nặng vì nền lợi nhuận gần 0). CẤM dùng (G1). Finnhub cũng có forwardPEG=21.82 — cũng CẤM." },
+
+  "pe_ttm_vendor": { "value": 64.734, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "peTTM", "tier": "data_vendor" },
+
+  "eps_actual": [
+    { "fy": 2025, "period": "2025-06-30", "value": 0.153, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor", "note": "GAAP diluted — năm ĐẦU TIÊN có lãi (gần 0)." },
+    { "fy": 2024, "period": "2024-06-30", "value": -1.671, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor", "note": "LỖ." },
+    { "fy": 2023, "period": "2023-06-30", "value": -3.3363, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor", "note": "LỖ sâu." },
+    { "fy": 2022, "period": "2022-06-30", "value": -2.5112, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor", "note": "LỖ." }
+  ],
+
+  "eps_forward": [
+    { "fy": 2026, "value": 3.1027, "analyst_count": 8, "eps_high": 3.58, "eps_low": 2.58, "source": "Alpha Vantage EARNINGS_ESTIMATES (consensus, nhiều khả năng non-GAAP/adjusted)", "url": "https://www.alphavantage.co/documentation/#earnings-estimates", "as_of_date": "2026-06-19", "field": "eps_estimate_average", "tier": "data_vendor", "note": "ĐỘ VÊNH NGHIÊM TRỌNG (~3x): EPS GAAP TTM (Finnhub) = 1.07 và Zacks consensus FY2026 GAAP ~1.08, trong khi Alpha Vantage FY2026 = 3.10 (chỉ 8 analyst trên số FY). Nhiều khả năng khác cơ sở GAAP vs non-GAAP. => forward P/E & PEG đổi rất mạnh theo cơ sở chọn." },
+    { "fy": 2027, "value": 3.7769, "analyst_count": 8, "eps_high": 4.54, "eps_low": 2.94, "source": "Alpha Vantage EARNINGS_ESTIMATES (consensus)", "url": "https://www.alphavantage.co/documentation/#earnings-estimates", "as_of_date": "2026-06-19", "field": "eps_estimate_average", "tier": "data_vendor", "note": "Cùng cơ sở với FY2026 của Alpha Vantage (để CAGR nhất quán); vẫn dính cảnh báo độ vênh GAAP." },
+    { "fy": 2028, "value": "GAP", "reason": "Không có consensus đáng tin cho FY2028.", "tier": "gap" },
+    { "fy": 2029, "value": "GAP", "reason": "Không có consensus đáng tin cho FY2029.", "tier": "gap" }
+  ],
+
+  "revenue_forward": [
+    { "fy": 2026, "value": 4202766390, "analyst_count": 29, "source": "Alpha Vantage EARNINGS_ESTIMATES (đối chiếu Zacks ~4.14 tỷ)", "url": "https://www.alphavantage.co/documentation/#earnings-estimates", "as_of_date": "2026-06-19", "field": "revenue_estimate_average", "tier": "data_vendor" },
+    { "fy": 2027, "value": 5262673160, "analyst_count": 30, "source": "Alpha Vantage EARNINGS_ESTIMATES", "url": "https://www.alphavantage.co/documentation/#earnings-estimates", "as_of_date": "2026-06-19", "field": "revenue_estimate_average", "tier": "data_vendor" }
+  ],
+
+  "fcf": { "value": "GAP", "reason": "FCF tuyệt đối chưa có nguồn sạch; Finnhub fcfMargin FY2025 = +18.7% (DƯƠNG) nhưng FCF của một công ty cho vay BNPL bị nhiễu mạnh bởi tài trợ khoản vay/chứng khoán hóa nên không dùng làm chỉ số định giá trực tiếp.", "source": "Finnhub MCP get_basic_financials (fcfMargin)", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "tier": "gap" },
+
+  "fundamentals_aux": {
+    "gmv_q1fy2026": { "value": 10400000000, "source": "Affirm Q1 FY2026 (Yahoo Finance tổng hợp)", "url": "https://finance.yahoo.com/news/buy-hold-sell-affirm-stock-161600432.html", "as_of_date": "2025-09-30", "field": "GMV", "tier": "news", "note": "+42% YoY." },
+    "revenue_q1fy2026": { "value": 933000000, "source": "Affirm Q1 FY2026 (Yahoo Finance)", "url": "https://finance.yahoo.com/news/buy-hold-sell-affirm-stock-161600432.html", "as_of_date": "2025-09-30", "field": "revenue", "tier": "news", "note": "+33% YoY." },
+    "beta": { "value": 3.7621114, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "beta", "tier": "data_vendor", "note": "Beta ~3.76 (RẤT cao) — biến động giá lớn; KHÔNG dùng để sàng lọc tăng trưởng." }
+  },
+
+  "growth_runway": {
+    "drivers": [
+      { "text": "GMV Q1 FY2026 ~10.4 tỷ USD (+42% YoY); doanh thu ~933 triệu (+33%); biên lợi nhuận cải thiện, vừa chuyển sang có lãi GAAP.", "source": "Affirm Q1 FY2026 (Yahoo Finance)", "url": "https://finance.yahoo.com/news/buy-hold-sell-affirm-stock-161600432.html", "as_of_date": "2025-09-30", "tier": "news" }
+    ],
+    "backlog_rpo": { "text": "Không phải mô hình backlog/RPO như SaaS. Động lực phân phối: hợp tác Amazon, Shopify, Apple Pay/Walmart; thẻ Affirm Card mở rộng tần suất sử dụng; sản phẩm 0% APR do merchant tài trợ.", "source": "Simply Wall St – Affirm", "url": "https://simplywall.st/stocks/us/diversified-financials/nasdaq-afrm/affirm-holdings/future", "as_of_date": "2026-06", "tier": "news" },
+    "tam": { "text": "TAM tài trợ điểm-bán (POS)/BNPL toàn cầu lớn và đang số hóa; Affirm Card đưa BNPL vào chi tiêu hằng ngày. Tăng trưởng doanh thu dự phóng ~18.5%/năm, EPS ~32%/năm (Simply Wall St).", "source": "Simply Wall St – Affirm forecast", "url": "https://simplywall.st/stocks/us/diversified-financials/nasdaq-afrm/affirm-holdings/future", "as_of_date": "2026-06", "tier": "news" },
+    "segments": [
+      { "text": "Doanh thu từ network/merchant fees + interest income (lãi khoản vay) + servicing; phụ thuộc chi phí vốn & chất lượng tín dụng.", "source": "Simply Wall St – Affirm", "url": "https://simplywall.st/stocks/us/diversified-financials/nasdaq-afrm/affirm-holdings", "as_of_date": "2026-06", "tier": "news" }
+    ],
+    "risks": [
+      "RỦI RO TÍN DỤNG/CHU KỲ TIÊU DÙNG: tổn thất nợ (charge-offs) tăng mạnh khi suy thoái — lợi nhuận mới-chớm-dương có thể đảo ngược nhanh.",
+      "Chi phí vốn/lãi suất: biên lợi nhuận nhạy với lãi suất và khả năng tiếp cận thị trường chứng khoán hóa.",
+      "Quy định: khung pháp lý BNPL (CFPB) siết lại có thể tăng chi phí tuân thủ.",
+      "Cạnh tranh gay gắt (Klarna, PayPal, Apple, Afterpay/Block); beta ~3.76 => biến động giá cực lớn.",
+      "Optionality: Affirm Card + hợp tác lớn (Amazon/Apple) nếu giữ chất lượng tín dụng."
+    ]
+  },
+
+  "gaps": [
+    "ĐỘ VÊNH forward EPS ~3x (Alpha Vantage 3.10 vs GAAP/Zacks ~1.08) => forward P/E & PEG KHÔNG đáng tin; chỉ nên đọc định tính.",
+    "Forward EPS chỉ tới FY2027 (2 năm); FY2028–FY2029 GAP => khung 4 năm KHÔNG đủ.",
+    "FCF tuyệt đối: GAP (mô hình cho vay làm FCF nhiễu).",
+    "Số FY estimate chỉ dựa trên ~8 analyst => coverage mỏng."
+  ]
+}

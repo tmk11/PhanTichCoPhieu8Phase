@@ -1,0 +1,69 @@
+{
+  "ticker": "ORCL",
+  "as_of": "2026-06-19",
+  "meta": {
+    "company": "Oracle Corporation",
+    "sector": "Software / Cloud Infrastructure",
+    "fiscal_year_end_month": 5,
+    "fiscal_year_note": "Năm tài chính Oracle kết thúc 31/05 (vd FY2026 kết thúc 31/05/2026; forward = FY2027..).",
+    "currency": "USD",
+    "cyclical": false,
+    "cyclical_reason": "Phần mềm/đám mây có tăng trưởng thế tục; KHÔNG thuộc nhóm chu kỳ bán dẫn/hàng hóa. Rủi ro chính là capex AI khổng lồ + tập trung khách hàng, không phải chu kỳ hàng hóa.",
+    "eps_basis_note": "EPS TTM & quá khứ GAAP diluted (Finnhub). Forward EPS consensus thường non-GAAP => caveat so sánh."
+  },
+  "price": { "value": 184.29, "source": "Finnhub MCP get_quote", "url": "https://finnhub.io/docs/api/quote", "as_of_date": "2026-06-18", "field": "c", "tier": "data_vendor" },
+
+  "eps_ttm": { "value": 5.8601, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "epsTTM", "tier": "data_vendor", "note": "GAAP diluted TTM." },
+
+  "peg_ttm_vendor": { "value": 1.83719, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "pegTTM", "tier": "data_vendor", "DO_NOT_USE_FOR_COMPUTE": true, "note": "Trường PEG dựng sẵn vendor. CẤM dùng tính PEG tiêu đề (G1). Finnhub cũng có forwardPEG=1.36154 — cũng CẤM." },
+
+  "pe_ttm_vendor": { "value": 31.0193, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "peTTM", "tier": "data_vendor" },
+
+  "eps_actual": [
+    { "fy": 2026, "period": "2026-05-31", "value": 5.8638, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor", "note": "GAAP diluted." },
+    { "fy": 2025, "period": "2025-05-31", "value": 4.3416, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor" },
+    { "fy": 2024, "period": "2024-05-31", "value": 3.7078, "source": "Finnhub MCP get_basic_financials series.annual.eps", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "eps", "tier": "data_vendor" }
+  ],
+
+  "eps_forward": [
+    { "fy": 2027, "value": 8.0321, "analyst_count": 40, "eps_high": 8.57, "eps_low": 7.72, "source": "Alpha Vantage EARNINGS_ESTIMATES (consensus)", "url": "https://www.alphavantage.co/documentation/#earnings-estimates", "as_of_date": "2026-06-19", "field": "eps_estimate_average", "tier": "data_vendor" },
+    { "fy": 2028, "value": 10.8829, "analyst_count": 37, "eps_high": 13.51, "eps_low": 8.28, "source": "Alpha Vantage EARNINGS_ESTIMATES (consensus)", "url": "https://www.alphavantage.co/documentation/#earnings-estimates", "as_of_date": "2026-06-19", "field": "eps_estimate_average", "tier": "data_vendor" },
+    { "fy": 2029, "value": "GAP", "reason": "Không có consensus đáng tin cho FY2029 (>2 năm) từ nguồn mở tại thời điểm chạy.", "tier": "gap" },
+    { "fy": 2030, "value": "GAP", "reason": "Không có consensus đáng tin cho FY2030.", "tier": "gap" }
+  ],
+
+  "revenue_forward": [
+    { "fy": 2027, "value": 89012010140, "analyst_count": 40, "source": "Alpha Vantage EARNINGS_ESTIMATES", "url": "https://www.alphavantage.co/documentation/#earnings-estimates", "as_of_date": "2026-06-19", "field": "revenue_estimate_average", "tier": "data_vendor" },
+    { "fy": 2028, "value": 129707035580, "analyst_count": 38, "source": "Alpha Vantage EARNINGS_ESTIMATES", "url": "https://www.alphavantage.co/documentation/#earnings-estimates", "as_of_date": "2026-06-19", "field": "revenue_estimate_average", "tier": "data_vendor" }
+  ],
+
+  "fcf": { "value": -23700000000, "source": "Oracle FY2026 Q4 results (CNBC tổng hợp 8-K)", "url": "https://www.cnbc.com/2026/06/10/oracle-orcl-q4-earnings-report-2026.html", "as_of_date": "2026-05-31", "field": "free_cash_flow_FY2026", "tier": "filing", "note": "FCF FY2026 ÂM ~ −23.7 tỷ USD do capex 55.7 tỷ (+162%). Operating cash flow +32 tỷ (+54%) — kinh doanh lõi mạnh nhưng FCF âm vì đầu tư hạ tầng AI." },
+
+  "fundamentals_aux": {
+    "capex_fy2026": { "value": 55700000000, "source": "Oracle FY2026 results (CNBC/Oracle IR)", "url": "https://www.cnbc.com/2026/06/10/oracle-orcl-q4-earnings-report-2026.html", "as_of_date": "2026-05-31", "field": "capex", "tier": "filing", "note": "+162% YoY." },
+    "operating_cash_flow_fy2026": { "value": 32000000000, "source": "Oracle FY2026 results", "url": "https://www.cnbc.com/2026/06/10/oracle-orcl-q4-earnings-report-2026.html", "as_of_date": "2026-05-31", "field": "operating_cash_flow", "tier": "filing", "note": "+54% YoY." },
+    "beta": { "value": 1.6747996, "source": "Finnhub MCP get_basic_financials", "url": "https://finnhub.io/docs/api/company-basic-financials", "as_of_date": "2026-06-19", "field": "beta", "tier": "data_vendor", "note": "Không dùng để sàng lọc tăng trưởng." }
+  },
+
+  "growth_runway": {
+    "drivers": [
+      { "text": "Oracle Cloud Infrastructure (OCI) + Cloud Applications là động cơ chính; Q4 & FY2026 đạt kết quả kỷ lục nhờ hợp đồng AI quy mô lớn.", "source": "Oracle IR – Record Q4 & FY2026", "url": "https://investor.oracle.com/investor-news/news-details/2026/Oracle-Announces-Record-Q4-and-FY-2026-Results-Driven-by-Cloud-Infrastructure--Cloud-Applications/default.aspx", "as_of_date": "2026-06-10", "tier": "filing" }
+    ],
+    "backlog_rpo": { "text": "RPO (remaining performance obligation) đạt ~638 tỷ USD cuối Q4 FY2026 (+363% YoY, +85 tỷ so với Q3); phần lớn từ hợp đồng AI quy mô lớn. BofA: >50% RPO đến từ OpenAI.", "source": "Oracle FY2026 results / DCD / BofA", "url": "https://www.datacenterdynamics.com/en/news/oracle-has-455bn-in-remaining-performance-obligations-at-end-of-q1-2026/", "as_of_date": "2026-05-31", "tier": "filing" },
+    "tam": { "text": "TAM hạ tầng đám mây + AI training/inference rất lớn; chiến lược multicloud (OCI chạy trong Azure/Google/AWS) + database (Oracle 23ai) mở rộng phân phối.", "source": "Oracle IR Q3 FY2026", "url": "https://www.oracle.com/news/announcement/q3fy26-earnings-release-2026-03-10/", "as_of_date": "2026-03-10", "tier": "filing" },
+    "segments": [
+      { "text": "Cloud Services & License Support (OCI + SaaS Fusion/NetSuite) – mảng lớn nhất, tăng tốc; Cloud License & On-Premise; Hardware; Services.", "source": "Oracle IR", "url": "https://investor.oracle.com/investor-news/news-details/2026/Oracle-Announces-Record-Q4-and-FY-2026-Results-Driven-by-Cloud-Infrastructure--Cloud-Applications/default.aspx", "as_of_date": "2026-06-10", "tier": "filing" }
+    ],
+    "risks": [
+      "FCF ÂM (−23.7 tỷ FY2026) do capex 55.7 tỷ — rủi ro tài trợ/ROIC nếu nhu cầu AI hạ nhiệt hoặc khách hàng chậm thanh toán.",
+      "Tập trung khách hàng cực cao: >50% RPO từ OpenAI => rủi ro đối tác đơn lẻ/khả năng thanh toán.",
+      "Đòn bẩy nợ cao (totalDebt/equity ~2.3–2.5) cộng capex lớn => rủi ro lãi suất/dòng tiền.",
+      "Optionality: nếu OCI/multicloud + database AI giữ đà, RPO 638 tỷ chuyển hóa doanh thu nhiều năm."
+    ]
+  },
+
+  "gaps": [
+    "Forward EPS chỉ tới FY2028 (2 năm data_vendor); FY2029–FY2030 GAP => khung 4 năm KHÔNG được lấp đủ.",
+    "Tăng trưởng EPS dùng cho PEG chỉ dựa trên 1 nhịp YoY FY2027→FY2028 (biến động cao)."
+  ]
+}
