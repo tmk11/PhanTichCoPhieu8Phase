@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Stock Pipeline — Forward PEG có cổng chặn & tự kiểm chứng</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>📊 Stock Pipeline <span class="sub">Forward PEG · 8-phase · cite-or-gap</span></h1>
+    <div id="meta" class="meta"></div>
+  </div>
+  <div class="wrap banner">⚠️ Tài liệu THAM KHẢO, không phải lời khuyên đầu tư. Mọi số có nguồn hoặc đánh dấu GAP; verifier tự tính lại từ input thô.</div>
+</header>
+
+<main class="wrap">
+  <section id="overview">
+    <h2>Tổng quan</h2>
+    <table id="tbl">
+      <thead><tr>
+        <th>Ticker</th><th>Verdict</th><th>fwd P/E</th><th>CAGR</th>
+        <th>forward PEG (tay)</th><th>vendor pegTTM</th><th>Guard nổi bật</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+    <p class="hint">Bấm một dòng để xem báo cáo đầy đủ + hỏi AI.</p>
+  </section>
+
+  <section id="detail" hidden>
+    <div class="detail-head">
+      <h2 id="d-title"></h2>
+      <button id="d-close" class="ghost">✕ đóng</button>
+    </div>
+
+    <div class="grid">
+      <article id="report" class="card md"></article>
+
+      <aside class="card ai">
+        <h3>🤖 Hỏi AI (đa model qua 9router)</h3>
+        <label>Model
+          <select id="model"></select>
+        </label>
+        <div class="row">
+          <button id="btn-review" class="primary">Nhận xét báo cáo</button>
+          <button id="btn-explain">Giải thích số liệu</button>
+        </div>
+        <textarea id="q" rows="3" placeholder="Hỏi tự do về cổ phiếu này…"></textarea>
+        <button id="btn-ask" class="primary wide">Hỏi</button>
+        <div id="ai-status" class="status"></div>
+        <div id="ai-out" class="md ai-out"></div>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">Sinh bởi pipeline 8-phase (derive→build→verify) · AI proxy qua 9router (key giữ ở server).</footer>
+<script src="/app.js"></script>
+</body>
+</html>
