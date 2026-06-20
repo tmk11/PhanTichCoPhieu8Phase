@@ -9,7 +9,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { fetchHard, researchMessages, mergeModel } from "../scripts/research.mjs";
+import { fetchHard, fetchHardYahoo, researchMessages, mergeModel } from "../scripts/research.mjs";
 import { analyze } from "../scripts/engine.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -18,6 +18,15 @@ const PUBLIC = path.join(__dirname, "public");
 const FINNHUB_KEY = process.env.FINNHUB_KEY || "";
 const MAX_MODELS = parseInt(process.env.MAX_MODELS || "6", 10);
 const RUBRIC = JSON.parse(fs.readFileSync(path.join(ROOT, "done.rubric.json"), "utf8"));
+// Nguồn số cứng: 'finnhub' (cần key) hoặc 'yahoo' (yfinance, keyless). Auto theo key sẵn có.
+const DATA_SOURCE = process.env.DATA_SOURCE || (FINNHUB_KEY ? "finnhub" : "yahoo");
+const PYTHON_BIN = process.env.PYTHON_BIN || path.join(ROOT, ".venv/bin/python");
+const YF_SCRIPT = path.join(ROOT, "scripts", "yf_hard.py");
+async function fetchHardData(ticker) {
+  return DATA_SOURCE === "finnhub"
+    ? fetchHard(ticker, FINNHUB_KEY, { signal: AbortSignal.timeout(20000) })
+    : fetchHardYahoo(ticker, { python: PYTHON_BIN, script: YF_SCRIPT });
+}
 
 const PORT = parseInt(process.env.PORT || "8895", 10);
 const HOST = process.env.HOST || "127.0.0.1";
@@ -169,7 +178,7 @@ const server = http.createServer(async (req, res) => {
     const p = url.pathname;
 
     if (p === "/api/summary") return sendJSON(res, 200, tickerSummary());
-    if (p === "/api/health") return sendJSON(res, 200, { ok: true, router: ROUTER_URL, hasKey: !!ROUTER_KEY, tickers: TICKERS });
+    if (p === "/api/health") return sendJSON(res, 200, { ok: true, router: ROUTER_URL, hasKey: !!ROUTER_KEY, dataSource: DATA_SOURCE, tickers: TICKERS });
     if (p.startsWith("/api/report/")) {
       const rep = reportFor(decodeURIComponent(p.slice("/api/report/".length)).toUpperCase());
       return rep ? sendJSON(res, 200, rep) : sendJSON(res, 404, { error: "ticker không hợp lệ" });
@@ -199,11 +208,10 @@ const server = http.createServer(async (req, res) => {
       let models = Array.isArray(body.models) ? body.models.filter(Boolean) : [];
       if (!models.length) models = [DEFAULT_MODEL];
       models = [...new Set(models)].slice(0, MAX_MODELS);
-      if (!FINNHUB_KEY) return sendJSON(res, 500, { error: "Server chưa cấu hình FINNHUB_KEY" });
 
       let hard;
-      try { hard = await fetchHard(ticker, FINNHUB_KEY, { signal: AbortSignal.timeout(20000) }); }
-      catch (e) { return sendJSON(res, 400, { error: "RESEARCH (Finnhub) lỗi: " + String(e.message || e) }); }
+      try { hard = await fetchHardData(ticker); }
+      catch (e) { return sendJSON(res, 400, { error: `RESEARCH (${DATA_SOURCE}) lỗi: ` + String(e.message || e) }); }
 
       const t0 = Date.now();
       // CHẠY SONG SONG các model

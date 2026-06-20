@@ -1,6 +1,9 @@
 // research.mjs — Phase 1 RESEARCH tự động cho mã BẤT KỲ (chạy on-demand trên VPS).
-// - Số CỨNG (giá, EPS quá khứ, pegTTM vendor) lấy từ Finnhub HTTP API (có nguồn thật).
+// - Số CỨNG (giá, EPS quá khứ, pegTTM vendor) lấy từ Finnhub HTTP API HOẶC Yahoo (yfinance, keyless).
 // - Forward EPS + định tính do MODEL ước lượng (tier:'model') — KHÔNG phải consensus vendor.
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+const pexec = promisify(execFile);
 const FINNHUB = "https://finnhub.io/api/v1";
 
 async function getJSON(url, signal) {
@@ -52,6 +55,31 @@ export async function fetchHard(ticker, key, { signal } = {}) {
 }
 
 const round = (x, d = 4) => (x == null || Number.isNaN(x) ? x : Math.round(x * 10 ** d) / 10 ** d);
+
+// Nguồn KEYLESS: Yahoo Finance qua scripts/yf_hard.py (yfinance). Cùng shape với fetchHard.
+export async function fetchHardYahoo(ticker, { python, script, timeoutMs = 30000 } = {}) {
+  let stdout;
+  try { ({ stdout } = await pexec(python, [script, ticker], { timeout: timeoutMs, maxBuffer: 8e6 })); }
+  catch (e) { throw new Error("yfinance lỗi: " + String(e.message || e)); }
+  const line = (stdout || "").trim().split("\n").filter(Boolean).pop();
+  let j; try { j = JSON.parse(line); } catch { throw new Error("yf_hard không trả JSON: " + (line || "").slice(0, 160)); }
+  if (!j.ok) throw new Error(j.error || "yfinance không lấy được dữ liệu");
+  const today = j.as_of;
+  const prov = (extra) => ({ source: "Yahoo Finance (yfinance)", url: `https://finance.yahoo.com/quote/${j.ticker}`, as_of_date: today, tier: "data_vendor", ...extra });
+  const eps_actual = (j.eps_actual || []).map((e) => prov({ fy: e.fy, period: e.period, value: e.value, field: "eps", note: "Diluted EPS năm (yfinance)" }));
+  const lastActualFY = eps_actual.length ? eps_actual[0].fy : new Date().getFullYear() - 1;
+  return {
+    ticker: j.ticker, as_of: today, _forwardFYs: [1, 2, 3, 4].map((k) => lastActualFY + k), _profile: {},
+    hard: {
+      price: prov({ value: j.price, field: "c", as_of_date: j.price_as_of || today }),
+      eps_ttm: j.eps_ttm != null ? prov({ value: j.eps_ttm, field: "epsTTM", note: "GAAP TTM (yfinance trailingEps)" }) : null,
+      peg_ttm_vendor: j.peg_ttm != null ? prov({ value: j.peg_ttm, field: "pegTTM", DO_NOT_USE_FOR_COMPUTE: true, note: "PEG dựng sẵn vendor — CẤM dùng (G1)." }) : null,
+      pe_ttm_vendor: j.pe_ttm != null ? prov({ value: j.pe_ttm, field: "peTTM" }) : null,
+      beta: j.beta != null ? prov({ value: j.beta, field: "beta", note: "Không dùng để sàng lọc tăng trưởng." }) : null,
+      eps_actual, company: j.company, sector: j.sector, fyeMonth: j.fye_month, lastActualFY,
+    },
+  };
+}
 
 // Prompt cho model: trả về JSON forward EPS + định tính. KHÔNG bịa số cứng.
 export function researchMessages(hard) {
