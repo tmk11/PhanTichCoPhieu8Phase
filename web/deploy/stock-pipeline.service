@@ -1,0 +1,15 @@
+[Unit]
+Description=Stock Pipeline dashboard (Forward PEG, 8-phase, self-verifying)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/stock-pipeline
+EnvironmentFile=/home/ubuntu/stock-pipeline/web/.env
+ExecStart=/usr/local/bin/node web/server.mjs
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
