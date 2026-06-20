@@ -126,7 +126,7 @@ $("#btn-ask").onclick = () => ask("ask");
 $("#q").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) ask("ask"); });
 
 // ================= Chạy mã mới (đa model song song) =================
-const GOOD_RE = /^(gh\/gpt-4o-mini|kr\/claude-haiku-4\.5|gh\/gemini-3-flash-preview|gh\/gpt-4o|kr\/claude-sonnet-4\.5)$/;
+const GOOD_RE = /^(gh\/gpt-4o-mini|kr\/claude-haiku-4\.5|gh\/gpt-4o|kr\/claude-sonnet-4\.5)$/;
 async function loadModelChecklist() {
   const r = await fetch("/api/models").then((r) => r.json()).catch(() => ({ models: [] }));
   const list = (r.models || []).filter((m) => /^(gh|kr|cl|gemini|kc)\//.test(m));
