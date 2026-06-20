@@ -29,7 +29,8 @@ export const PROV_FIELDS = ["value", "source", "url", "as_of_date", "field"];
 export function isGap(node) {
   return node && (node.value === "GAP" || node.tier === "gap");
 }
-// Một node "số" hợp lệ khi: có đủ 5 trường provenance, HOẶC là GAP tường minh.
+// Một node "số" hợp lệ khi: có đủ 5 trường provenance, HOẶC là GAP tường minh,
+// HOẶC là ước lượng của model (tier:'model') — url được phép null nhưng PHẢI có 'basis'.
 export function nodeProvenanceStatus(node) {
   if (node === null || node === undefined) return { ok: false, reason: "node null" };
   if (isGap(node)) {
@@ -37,6 +38,14 @@ export function nodeProvenanceStatus(node) {
     return { ok: true, gap: true };
   }
   if (typeof node !== "object") return { ok: false, reason: "không phải object có provenance (số trần)" };
+  if (node.tier === "model") {
+    // Ước lượng của LLM: nguồn = model id, không có url, nhưng phải khai 'basis' (lý do/cơ sở).
+    const need = ["value", "source", "as_of_date", "field"].filter((f) => node[f] === undefined || node[f] === null || node[f] === "");
+    if (need.length) return { ok: false, reason: `model-node thiếu: ${need.join(", ")}` };
+    if (!node.basis) return { ok: false, reason: "model-node thiếu 'basis'" };
+    if (typeof node.value !== "number") return { ok: false, reason: "model value không phải số" };
+    return { ok: true, gap: false, model: true };
+  }
   const missing = PROV_FIELDS.filter((f) => node[f] === undefined || node[f] === null || node[f] === "");
   if (missing.length) return { ok: false, reason: `thiếu trường: ${missing.join(", ")}` };
   if (typeof node.value !== "number") return { ok: false, reason: "value không phải số (và không phải GAP)" };

@@ -1,6 +1,6 @@
-{"ts":"2026-06-20T06:31:41.936Z","ticker":"MSFT","phase":"RESEARCH","gate_pass":true,"nodes":14,"sources":["Investing.com analysis (consensus, non-GAAP)","Finnhub MCP get_quote","Microsoft Q1 FY2026 earnings (Futurum tổng hợp 8-K)"]}
-{"ts":"2026-06-20T06:31:41.936Z","ticker":"MSFT","phase":"INGEST","gate_pass":true}
-{"ts":"2026-06-20T06:31:41.936Z","ticker":"MSFT","phase":"DERIVE","gate_pass":true,"forwardPE":23.8167,"cagr_pct":16.8213,"peg":1.4159}
-{"ts":"2026-06-20T06:31:41.937Z","ticker":"MSFT","phase":"BUILD","gate_pass":true,"report":"reports/MSFT-analysis.md"}
-{"ts":"2026-06-20T06:31:41.938Z","ticker":"MSFT","phase":"VERIFY","gate_pass":true,"verdict":"pass","critical_fail":0}
-{"ts":"2026-06-20T06:31:41.939Z","ticker":"MSFT","phase":"LOOP","gate_pass":true,"iters":0,"g1demo":{"corrupt_refused":true,"restored_pass":true,"vendorPeg":1.5835}}
+{"ts":"2026-06-20T15:57:22.639Z","ticker":"MSFT","phase":"RESEARCH","gate_pass":true,"nodes":14,"sources":["Investing.com analysis (consensus, non-GAAP)","Finnhub MCP get_quote","Microsoft Q1 FY2026 earnings (Futurum tổng hợp 8-K)"]}
+{"ts":"2026-06-20T15:57:22.639Z","ticker":"MSFT","phase":"INGEST","gate_pass":true}
+{"ts":"2026-06-20T15:57:22.640Z","ticker":"MSFT","phase":"DERIVE","gate_pass":true,"forwardPE":23.8167,"cagr_pct":16.8213,"peg":1.4159}
+{"ts":"2026-06-20T15:57:22.642Z","ticker":"MSFT","phase":"BUILD","gate_pass":true,"report":"reports/MSFT-analysis.md"}
+{"ts":"2026-06-20T15:57:22.643Z","ticker":"MSFT","phase":"VERIFY","gate_pass":true,"verdict":"pass","critical_fail":0}
+{"ts":"2026-06-20T15:57:22.645Z","ticker":"MSFT","phase":"LOOP","gate_pass":true,"iters":0,"g1demo":{"corrupt_refused":true,"restored_pass":true,"vendorPeg":1.5835}}

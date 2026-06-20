@@ -1,10 +1,10 @@
 # AFRM — Phân tích định giá theo Forward PEG (Affirm Holdings, Inc.)
 *as_of: 2026-06-19 · giá tham chiếu: $73.92 (Finnhub MCP get_quote, 2026-06-18)*
 
-> ⚠️ **Đây là tài liệu THAM KHẢO cho quyết định của riêng người đọc, KHÔNG phải lời khuyên đầu tư.**
+> ⚠️ **Đây là tài liệu THAM KHẢO, KHÔNG phải lời khuyên đầu tư.**
 
 ## 1. Tóm tắt một dòng
-Forward PEG (tính tay) ≈ **1.0964** ⇒ KHÔNG rẻ theo tăng trưởng. Cảnh báo lớn nhất: **khung 4 năm KHÔNG đủ dữ liệu consensus (GAP các năm xa)**.
+Forward PEG (tính tay) ≈ **1.0964** ⇒ KHÔNG rẻ theo tăng trưởng. Cảnh báo lớn nhất: **khung dự phóng KHÔNG đủ dữ liệu consensus (GAP các năm xa)**.
 
 ## 2. Bảng định lượng (theo năm dự phóng)
 | FY | EPS est | nguồn-tier | Forward P/E | YoY EPS |
@@ -17,14 +17,13 @@ Forward PEG (tính tay) ≈ **1.0964** ⇒ KHÔNG rẻ theo tăng trưởng. C�
 **Cách tính (tự kiểm chứng được):**
 - Forward P/E[FY2026] = $73.92 ÷ 3.1027 = **23.82**.
 - Tăng trưởng EPS: CAGR FY2026→FY2027 = (3.7769/3.1027)^(1/1) − 1 = **21.73%** (năm xa nhất: tier data_vendor).
-- **Forward PEG = 23.82 ÷ 21.73 = 1.0964** (chia cho số phần-trăm-nguyên, KHÔNG chia 0.xx; method=manual).
-- Biến thể chỉ-dùng-data_vendor (loại nguồn news): CAGR FY2026→FY2027 = 21.73% ⇒ PEG = 1.0964.
+- **Forward PEG = 23.82 ÷ 21.73 = 1.0964** (chia cho số phần-trăm-nguyên; method=manual).
 - Đối chiếu vendor pegTTM = 34.36739 (Finnhub) — **không dùng để tính**; chỉ chứng minh số tự tính KHÁC số dựng sẵn.
 
 ## 3. Caveat (đọc kỹ trước khi dùng số)
-- 🟠 **Nền lỗ / lãi-gần-0 (loss-to-profit / low-base):** min(EPS quá khứ)=-3.3363 <= 0.5 => CAGR/growth lịch sử bị thổi phồng; PEG trailing & growth quá khứ méo. Các con số tăng trưởng quá khứ (vd epsGrowth3Y/5Y, pegTTM vendor) **bị thổi phồng** và không nên dùng làm PEG tiêu đề.
+- 🟠 **Nền lỗ / lãi-gần-0 (loss-to-profit / low-base):** min(EPS quá khứ)=-3.3363 <= 0.5 => CAGR/growth lịch sử bị thổi phồng; PEG trailing & growth quá khứ méo. Tăng trưởng quá khứ **bị thổi phồng**, không nên dùng làm PEG tiêu đề.
 - ⚪ **FCF (chưa chốt nguồn tuyệt đối):** FCF tuyệt đối chưa có nguồn sạch; Finnhub fcfMargin FY2025 = +18.7% (DƯƠNG) nhưng FCF của một công ty cho vay BNPL bị nhiễu mạnh bởi tài trợ khoản vay/chứng khoán hóa nên không dùng làm chỉ số định giá trực tiếp. (Finnhub MCP get_basic_financials (fcfMargin)).
-- ⚪ **GAAP vs non-GAAP:** EPS TTM/quá khứ là GAAP; forward consensus thường non-GAAP ⇒ forward P/E so với trailing là khập khiễng.
+- ⚪ **GAAP vs non-GAAP:** EPS TTM/quá khứ GAAP; forward thường non-GAAP ⇒ forward P/E so trailing khập khiễng.
 - ⚪ **Độ vênh giữa các nguồn forward EPS:**
   - FY2026: dùng 3.1027 (data_vendor). ĐỘ VÊNH NGHIÊM TRỌNG (~3x): EPS GAAP TTM (Finnhub) = 1.07 và Zacks consensus FY2026 GAAP ~1.08, trong khi Alpha Vantage FY2026 = 3.10 (chỉ 8 analyst trên số FY). Nhiều khả năng khác cơ sở GAAP vs non-GAAP. => forward P/E & PEG đổi rất mạnh theo cơ sở chọn.
   - FY2027: dùng 3.7769 (data_vendor). Cùng cơ sở với FY2026 của Alpha Vantage (để CAGR nhất quán); vẫn dính cảnh báo độ vênh GAAP.
@@ -38,12 +37,12 @@ Forward PEG (tính tay) ≈ **1.0964** ⇒ KHÔNG rẻ theo tăng trưởng. C�
 **Động cơ tăng trưởng:**
 - GMV Q1 FY2026 ~10.4 tỷ USD (+42% YoY); doanh thu ~933 triệu (+33%); biên lợi nhuận cải thiện, vừa chuyển sang có lãi GAAP. *(Affirm Q1 FY2026 (Yahoo Finance), 2025-09-30)*
 
-**Backlog / RPO:** Không phải mô hình backlog/RPO như SaaS. Động lực phân phối: hợp tác Amazon, Shopify, Apple Pay/Walmart; thẻ Affirm Card mở rộng tần suất sử dụng; sản phẩm 0% APR do merchant tài trợ. *(Simply Wall St – Affirm, 2026-06)*
+**Backlog / RPO:** Không phải mô hình backlog/RPO như SaaS. Động lực phân phối: hợp tác Amazon, Shopify, Apple Pay/Walmart; thẻ Affirm Card mở rộng tần suất sử dụng; sản phẩm 0% APR do merchant tài trợ. *(Simply Wall St – Affirm)*
 
-**TAM còn lại:** TAM tài trợ điểm-bán (POS)/BNPL toàn cầu lớn và đang số hóa; Affirm Card đưa BNPL vào chi tiêu hằng ngày. Tăng trưởng doanh thu dự phóng ~18.5%/năm, EPS ~32%/năm (Simply Wall St). *(Simply Wall St – Affirm forecast, 2026-06)*
+**TAM còn lại:** TAM tài trợ điểm-bán (POS)/BNPL toàn cầu lớn và đang số hóa; Affirm Card đưa BNPL vào chi tiêu hằng ngày. Tăng trưởng doanh thu dự phóng ~18.5%/năm, EPS ~32%/năm (Simply Wall St). *(Simply Wall St – Affirm forecast)*
 
 **Segment & tốc độ:**
-- Doanh thu từ network/merchant fees + interest income (lãi khoản vay) + servicing; phụ thuộc chi phí vốn & chất lượng tín dụng. *(Simply Wall St – Affirm, 2026-06)*
+- Doanh thu từ network/merchant fees + interest income (lãi khoản vay) + servicing; phụ thuộc chi phí vốn & chất lượng tín dụng. *(Simply Wall St – Affirm)*
 
 **Rủi ro chiến lược & optionality:**
 - RỦI RO TÍN DỤNG/CHU KỲ TIÊU DÙNG: tổn thất nợ (charge-offs) tăng mạnh khi suy thoái — lợi nhuận mới-chớm-dương có thể đảo ngược nhanh.
@@ -52,10 +51,10 @@ Forward PEG (tính tay) ≈ **1.0964** ⇒ KHÔNG rẻ theo tăng trưởng. C�
 - Cạnh tranh gay gắt (Klarna, PayPal, Apple, Afterpay/Block); beta ~3.76 => biến động giá cực lớn.
 - Optionality: Affirm Card + hợp tác lớn (Amazon/Apple) nếu giữ chất lượng tín dụng.
 
-**Forward revenue (consensus):** FY2026 ≈ 4.2 tỷ USD (29 analysts); FY2027 ≈ 5.3 tỷ USD (30 analysts).
+**Forward revenue:** FY2026 ≈ 4.2 tỷ USD (data_vendor); FY2027 ≈ 5.3 tỷ USD (data_vendor).
 
 ## 5. Khung tham khảo
-Đây là tài liệu tham khảo cho quyết định của riêng tôi, **không phải lời khuyên đầu tư**. Mọi con số đều kèm nguồn hoặc được đánh dấu GAP; verifier tự tính lại từ input thô để chống "xuất xưởng" số không kiểm chứng.
+Đây là tài liệu tham khảo cho quyết định của riêng tôi, **không phải lời khuyên đầu tư**. Mọi số có nguồn hoặc đánh dấu GAP/model; verifier tự tính lại từ input thô.
 
 ## 6. Nguồn (kèm as_of_date)
 - [Finnhub MCP get_quote — as_of 2026-06-18](https://finnhub.io/docs/api/quote)
@@ -66,4 +65,4 @@ Forward PEG (tính tay) ≈ **1.0964** ⇒ KHÔNG rẻ theo tăng trưởng. C�
 - [Simply Wall St – Affirm — as_of 2026-06](https://simplywall.st/stocks/us/diversified-financials/nasdaq-afrm/affirm-holdings)
 
 ---
-*Sinh tự động bởi pipeline 8-phase (derive→build→verify). Recompute & guards: xem artifacts/verifier-report-AFRM.json.*
+*Sinh tự động bởi pipeline 8-phase (derive→build→verify).*

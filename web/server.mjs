@@ -9,10 +9,15 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { fetchHard, researchMessages, mergeModel } from "../scripts/research.mjs";
+import { analyze } from "../scripts/engine.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const PUBLIC = path.join(__dirname, "public");
+const FINNHUB_KEY = process.env.FINNHUB_KEY || "";
+const MAX_MODELS = parseInt(process.env.MAX_MODELS || "6", 10);
+const RUBRIC = JSON.parse(fs.readFileSync(path.join(ROOT, "done.rubric.json"), "utf8"));
 
 const PORT = parseInt(process.env.PORT || "8895", 10);
 const HOST = process.env.HOST || "127.0.0.1";
@@ -92,6 +97,7 @@ async function routerChat({ model, messages, temperature = 0.3, max_tokens = 120
     method: "POST",
     headers: { Authorization: `Bearer ${ROUTER_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model, messages, temperature, max_tokens, stream: false }),
+    signal: AbortSignal.timeout(150000),
   });
   const ct = r.headers.get("content-type") || "";
   const raw = await r.text();
@@ -141,6 +147,22 @@ function buildMessages(mode, ticker, question, reportText, spec) {
   ];
 }
 
+// Chạy 8-phase on-demand cho 1 (mã, model): research model -> ghép Finnhub -> derive/build/verify.
+async function runOneModel(hard, model, max_tokens = 1700) {
+  const raw = await routerChat({ model, messages: researchMessages(hard), temperature: 0.2, max_tokens });
+  const canon = mergeModel(hard, raw, model);
+  const a = analyze(canon, RUBRIC);
+  return {
+    model, verdict: a.verdict, model_sourced: a.model_sourced,
+    forwardPE: a.forwardPE, fy: a.fy, cagr_pct: a.cagr_pct, forwardPEG: a.forwardPEG,
+    vendor_pegTTM: a.vendor_pegTTM, flags: a.flags,
+    checks: a.checks.map((c) => ({ id: c.id, status: c.status, critical: c.critical })),
+    report: a.report,
+  };
+}
+
+const TICKER_RE = /^[A-Z][A-Z.\-]{0,6}$/;
+
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
@@ -169,6 +191,31 @@ const server = http.createServer(async (req, res) => {
       const t0 = Date.now();
       const content = await routerChat({ model, messages, temperature: body.temperature ?? 0.3 });
       return sendJSON(res, 200, { model, ms: Date.now() - t0, content });
+    }
+    if (p === "/api/run" && req.method === "POST") {
+      const body = JSON.parse((await readBody(req)) || "{}");
+      const ticker = String(body.ticker || "").toUpperCase().trim();
+      if (!TICKER_RE.test(ticker)) return sendJSON(res, 400, { error: "Mã không hợp lệ (chữ in hoa, tối đa 7 ký tự)" });
+      let models = Array.isArray(body.models) ? body.models.filter(Boolean) : [];
+      if (!models.length) models = [DEFAULT_MODEL];
+      models = [...new Set(models)].slice(0, MAX_MODELS);
+      if (!FINNHUB_KEY) return sendJSON(res, 500, { error: "Server chưa cấu hình FINNHUB_KEY" });
+
+      let hard;
+      try { hard = await fetchHard(ticker, FINNHUB_KEY, { signal: AbortSignal.timeout(20000) }); }
+      catch (e) { return sendJSON(res, 400, { error: "RESEARCH (Finnhub) lỗi: " + String(e.message || e) }); }
+
+      const t0 = Date.now();
+      // CHẠY SONG SONG các model
+      const results = await Promise.all(models.map((m) =>
+        runOneModel(hard, m).catch((e) => ({ model: m, error: String(e && e.message ? e.message : e) }))));
+      return sendJSON(res, 200, {
+        ticker, company: hard.hard.company, sector: hard.hard.sector,
+        price: hard.hard.price.value, as_of: hard.as_of, forwardFYs: hard._forwardFYs,
+        eps_actual: hard.hard.eps_actual.map((e) => ({ fy: e.fy, value: e.value })),
+        vendor_pegTTM: hard.hard.peg_ttm_vendor?.value ?? null,
+        ms: Date.now() - t0, results,
+      });
     }
     if (p.startsWith("/api/")) return sendJSON(res, 404, { error: "endpoint không tồn tại" });
 

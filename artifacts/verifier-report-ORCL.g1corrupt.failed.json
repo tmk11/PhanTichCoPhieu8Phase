@@ -2,7 +2,7 @@
   "ticker": "ORCL",
   "as_of": "2026-06-19",
   "tag": "g1corrupt",
-  "ts": "2026-06-20T06:31:41.945Z",
+  "ts": "2026-06-20T15:57:22.656Z",
   "recompute": {
     "forwardPE_headline": 22.9442,
     "fy": 2027,
@@ -15,25 +15,25 @@
       "id": "G4_cite_or_gap",
       "critical": true,
       "status": "pass",
-      "detail": "Mọi node có provenance hoặc GAP tường minh; input tiêu đề đủ nguồn."
+      "detail": "Mọi node có provenance/GAP/model-basis."
     },
     {
       "id": "G7_recompute_matches",
       "critical": true,
       "status": "fail",
-      "detail": "PEG spec=1.83719 vs recompute=0.6465 (Δ=1.1907 > 0.02)"
+      "detail": "PEG khai=1.83719 vs recompute=0.6465"
     },
     {
       "id": "G1_peg_manual",
       "critical": true,
       "status": "fail",
-      "detail": "PEG spec=1.83719 TRÙNG vendor pegTTM=1.83719 (Δ<=0.03) ⇒ nghi dùng số dựng sẵn"
+      "detail": "PEG=1.83719 TRÙNG vendor pegTTM=1.83719"
     },
     {
       "id": "G2_cyclical_guard",
       "critical": true,
       "status": "pass",
-      "detail": "Không phải cyclical ⇒ n/a."
+      "detail": "Không cyclical ⇒ n/a."
     },
     {
       "id": "G3_loss_to_profit",
@@ -45,7 +45,7 @@
       "id": "G5_tam_section",
       "critical": false,
       "status": "pass",
-      "detail": "Phần growth-runway/TAM đầy đủ (động cơ, backlog/RPO, segment, rủi ro)."
+      "detail": "TAM đủ."
     },
     {
       "id": "G6_fcf_caveat",

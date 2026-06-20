@@ -125,4 +125,78 @@ $("#btn-explain").onclick = () => ask("explain");
 $("#btn-ask").onclick = () => ask("ask");
 $("#q").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) ask("ask"); });
 
+// ================= Chạy mã mới (đa model song song) =================
+const GOOD_RE = /^(gh\/gpt-4o-mini|kr\/claude-haiku-4\.5|gh\/gemini-3-flash-preview|gh\/gpt-4o|kr\/claude-sonnet-4\.5)$/;
+async function loadModelChecklist() {
+  const r = await fetch("/api/models").then((r) => r.json()).catch(() => ({ models: [] }));
+  const list = (r.models || []).filter((m) => /^(gh|kr|cl|gemini|kc)\//.test(m));
+  const box = $("#model-list"); box.innerHTML = "";
+  for (const m of list) {
+    const id = "m_" + m.replace(/[^a-z0-9]/gi, "_");
+    const lab = document.createElement("label");
+    lab.innerHTML = `<input type="checkbox" value="${m}" ${GOOD_RE.test(m) ? "checked" : ""}/> ${m}`;
+    box.appendChild(lab);
+  }
+  box.addEventListener("change", updatePickCount);
+  updatePickCount();
+}
+function pickedModels() { return [...document.querySelectorAll("#model-list input:checked")].map((i) => i.value); }
+function updatePickCount() { $("#pick-count").textContent = `(${pickedModels().length} model đã chọn, tối đa 6)`; }
+
+async function runNew() {
+  const ticker = $("#new-ticker").value.toUpperCase().trim();
+  if (!/^[A-Z][A-Z.\-]{0,6}$/.test(ticker)) { $("#run-status").textContent = "Mã không hợp lệ"; return; }
+  let models = pickedModels();
+  if (!models.length) { $("#model-pick").hidden = false; $("#run-status").textContent = "Hãy chọn ít nhất 1 model"; return; }
+  if (models.length > 6) { $("#run-status").textContent = "Tối đa 6 model"; return; }
+  $("#btn-run").disabled = true;
+  $("#run-status").textContent = `Đang chạy ${ticker} trên ${models.length} model (song song)…`;
+  $("#run-results").innerHTML = "";
+  try {
+    const t0 = Date.now();
+    const d = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker, models }) }).then((r) => r.json());
+    if (d.error) throw new Error(d.error);
+    $("#run-status").textContent = `${ticker} · ${((Date.now() - t0) / 1000).toFixed(1)}s · ${d.results.length} model`;
+    renderRun(d);
+  } catch (e) { $("#run-status").textContent = "Lỗi: " + (e.message || e); }
+  finally { $("#btn-run").disabled = false; }
+}
+
+function renderRun(d) {
+  const ok = d.results.filter((r) => !r.error && r.forwardPEG != null);
+  const pegs = ok.map((r) => r.forwardPEG);
+  const disp = pegs.length > 1 ? `Độ phân tán forward PEG giữa model: ${Math.min(...pegs).toFixed(2)} – ${Math.max(...pegs).toFixed(2)} (chênh ${(Math.max(...pegs) - Math.min(...pegs)).toFixed(2)})` : "";
+  const epsHist = (d.eps_actual || []).map((e) => `FY${e.fy}=${e.value}`).join(", ");
+  let html = `<div class="run-head"><b>${d.ticker}</b> — ${d.company} · ngành ${d.sector} · giá $${d.price} · EPS quá khứ: ${epsHist} · vendor pegTTM ${fmt(d.vendor_pegTTM)} · forward FY ${d.forwardFYs.join("/")} <span class="hint">(số cứng: Finnhub)</span></div>`;
+  if (disp) html += `<div class="disp">⚖️ ${disp} — phân tán lớn = bất định cao.</div>`;
+  html += `<div class="cmp">` + d.results.map(mcard).join("") + `</div>`;
+  $("#run-results").innerHTML = html;
+}
+
+function mcard(r) {
+  if (r.error) return `<div class="mcard"><h4>${r.model}</h4><div class="err">✗ ${r.error}</div></div>`;
+  const pegCls = r.forwardPEG != null ? (r.forwardPEG < 1 ? "cheap" : "rich") : "";
+  const guards = (r.checks || []).map((c) => `<span class="gpill ${c.status}" title="${c.id}">${c.id.split("_")[0]}</span>`).join("");
+  const rep = md2html(r.report || "");
+  return `<div class="mcard">
+    <h4>${r.model}</h4>
+    <div><span class="badge ${r.verdict}">${r.verdict}</span> ${r.model_sourced ? '<span class="gpill" style="color:#e3b341">model-sourced</span>' : ""}</div>
+    <div class="kpis">
+      <div>fwd P/E<b>${fmt(r.forwardPE)}</b></div>
+      <div>CAGR<b>${r.cagr_pct != null ? fmt(r.cagr_pct) + "%" : "—"}</b></div>
+      <div>forward PEG<b class="${pegCls}">${fmt(r.forwardPEG)}</b></div>
+      <div>vendor pegTTM<b>${fmt(r.vendor_pegTTM)}</b></div>
+    </div>
+    <div class="guards-mini">${guards}</div>
+    <details><summary>Xem báo cáo đầy đủ</summary><div class="md">${rep}</div></details>
+  </div>`;
+}
+
+$("#btn-run").onclick = runNew;
+$("#btn-toggle-models").onclick = () => { const e = $("#model-pick"); e.hidden = !e.hidden; };
+$("#new-ticker").addEventListener("keydown", (e) => { if (e.key === "Enter") runNew(); });
+$("#pick-good").onclick = (e) => { e.preventDefault(); document.querySelectorAll("#model-list input").forEach((i) => (i.checked = GOOD_RE.test(i.value))); updatePickCount(); };
+$("#pick-none").onclick = (e) => { e.preventDefault(); document.querySelectorAll("#model-list input").forEach((i) => (i.checked = false)); updatePickCount(); };
+
 loadOverview().catch((e) => { $("#meta").textContent = "Lỗi tải dữ liệu: " + e.message; });
+loadModelChecklist();
