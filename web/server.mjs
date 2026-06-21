@@ -178,7 +178,7 @@ function writerView(model, a, iterations, refined) {
 // REVIEWER: model độc lập soi báo cáo của writer để bắt lỗi.
 // Bỏ mọi finding nhắm vào ĐỘ TIN của forward EPS (người dùng nhập = tin cậy, không soi).
 const EPS_TRUST_RE = /(forward[\s_-]?eps|eps\s*(forward|dự\s*phóng|tương\s*lai|ước\s*lượng))/i;
-const TRUST_WORD_RE = /(tin cậy|độ tin|kiểm chứng|xác minh|verif|nguồn|tự nhập|người dùng nhập|không.*kiểm|độc lập|giả định)/i;
+const TRUST_WORD_RE = /(tin cậy|độ tin|kiểm chứng|xác minh|verif|nguồn|tự nhập|người dùng nhập|không.*kiểm|độc lập|giả định|lạc quan|quá mức|quá cao|quá thấp|thổi phồng|phi thực tế|khó đạt|tham vọng|optimistic|aggressive|bất thường|thận trọng|chính xác|đáng tin)/i;
 function isEpsTrustFinding(text) {
   const t = String(text || "");
   return EPS_TRUST_RE.test(t) && TRUST_WORD_RE.test(t);
