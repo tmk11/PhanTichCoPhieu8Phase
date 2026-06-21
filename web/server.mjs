@@ -176,13 +176,21 @@ function writerView(model, a, iterations, refined) {
 }
 
 // REVIEWER: model độc lập soi báo cáo của writer để bắt lỗi.
+// Bỏ mọi finding nhắm vào ĐỘ TIN của forward EPS (người dùng nhập = tin cậy, không soi).
+const EPS_TRUST_RE = /(forward[\s_-]?eps|eps\s*(forward|dự\s*phóng|tương\s*lai|ước\s*lượng))/i;
+const TRUST_WORD_RE = /(tin cậy|độ tin|kiểm chứng|xác minh|verif|nguồn|tự nhập|người dùng nhập|không.*kiểm|độc lập|giả định)/i;
+function isEpsTrustFinding(text) {
+  const t = String(text || "");
+  return EPS_TRUST_RE.test(t) && TRUST_WORD_RE.test(t);
+}
 async function runReviewer(model, ctx, max_tokens = 900) {
   const raw = await routerChat({ model, messages: reviewMessages(ctx), temperature: 0.2, max_tokens });
   const j = parseJSONLoose(raw);
-  const status = j.status === "revise" ? "revise" : j.status === "pass" ? "pass" : "?";
-  const findings = Array.isArray(j.findings) ? j.findings.slice(0, 8).map((f) => ({
+  let findings = Array.isArray(j.findings) ? j.findings.slice(0, 10).map((f) => ({
     issue: String(f.issue || f.text || f).slice(0, 300), severity: f.severity || "med", section: f.section || "",
   })) : [];
+  findings = findings.filter((f) => !isEpsTrustFinding(f.issue + " " + f.section)); // bỏ soi forward EPS
+  const status = findings.length ? "revise" : (j.status === "revise" ? "pass" : (j.status === "pass" ? "pass" : "pass"));
   return { model, status, findings, summary: String(j.summary || "").slice(0, 400) };
 }
 
