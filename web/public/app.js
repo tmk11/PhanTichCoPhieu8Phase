@@ -71,6 +71,10 @@ function loadModelChecklist() {
     const wsel = $("#writer-model"); wsel.innerHTML = "";
     for (const m of list) { const o = document.createElement("option"); o.value = m; o.textContent = m; wsel.appendChild(o); }
     wsel.value = WRITER_PREF.find((m) => list.includes(m)) || list[0] || "";
+    // Meta-reviewer dropdown: có lựa chọn "(tắt)" + danh sách model
+    const msel = $("#meta-model"); msel.innerHTML = '<option value="">(tắt — dùng findings thô)</option>';
+    for (const m of list) { const o = document.createElement("option"); o.value = m; o.textContent = m; msel.appendChild(o); }
+    msel.value = WRITER_PREF.find((m) => list.includes(m)) || list[0] || "";
     // Reviewer checklist
     const box = $("#model-list"); box.innerHTML = "";
     for (const m of list) {
@@ -186,12 +190,13 @@ async function runNew() {
   const forwardEPS = collectEPS();
   if (!Object.keys(forwardEPS).length) { $("#run-status").textContent = "Hãy nhập forward EPS ít nhất 1 năm"; return; }
   const writer = $("#writer-model").value;
+  const metaReviewer = $("#meta-model").value;
   const reviewers = pickedModels().filter((m) => m !== writer).slice(0, 6);
   $("#btn-run").disabled = true;
   $("#run-status").textContent = "Đang khởi tạo…";
   $("#run-results").innerHTML = "";
   try {
-    const d = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker, forwardEPS, writer, reviewers }) }).then((r) => r.json());
+    const d = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker, forwardEPS, writer, reviewers, metaReviewer }) }).then((r) => r.json());
     if (d.error) throw new Error(d.error);
     localStorage.setItem(LS_CUR, d.id);
     renderJob(d);            // hiện ngay 4 chỉ số định lượng
@@ -231,12 +236,14 @@ function renderJob(d) {
   </div>`;
   html += `<div class="hint">✅ 4 chỉ số trên tính từ giá Yahoo + forward EPS bạn nhập (có ngay, không đợi AI).</div>`;
 
-  // refine timeline (cập nhật dần)
+  // refine timeline (cập nhật dần) — hiện cả gộp meta
   if ((d.rounds || []).length) {
     html += `<div class="rounds">` + d.rounds.map((rd) => {
       const tot = rd.reviews.reduce((s, x) => s + (x.findings || 0), 0);
-      const ok = rd.reviews.every((x) => x.status === "pass");
-      return `<span class="round ${ok ? "ok" : "bad"}">vòng ${rd.iter}: ${ok ? "sạch" : tot + " lỗi"}</span>`;
+      const m = rd.meta;
+      const label = m ? `vòng ${rd.iter}: ${tot}→${m.kept} lỗi (meta bỏ ${m.dropped})` : `vòng ${rd.iter}: ${tot ? tot + " lỗi" : "sạch"}`;
+      const ok = m ? (m.decision !== "revise") : rd.reviews.every((x) => x.status === "pass");
+      return `<span class="round ${ok ? "ok" : "bad"}">${label}</span>`;
     }).join(" → ") + (running ? ` <span class="round">…</span>` : "") + `</div>`;
   }
 
@@ -260,8 +267,18 @@ function renderJob(d) {
   } else if (running) {
     html += `<div class="writer-block card"><h4>✍️ Writer ${d.writerModel || ""} đang viết…</h4></div>`;
   }
+  // Meta-reviewer: danh sách findings ĐÃ GỘP (cái thực sự dùng để writer sửa)
+  if (d.meta) {
+    const cons = d.consolidated || [];
+    html += `<div class="writer-block card">
+      <h4>🧮 Meta-reviewer: ${d.meta.model} <span class="badge ${d.meta.decision === "revise" ? "revise" : "pass"}">${d.meta.decision === "revise" ? "CẦN SỬA" : "ĐẠT"}</span>
+        <span class="hint">gộp ${d.meta.raw}→${d.meta.kept} findings (bỏ ${d.meta.dropped} trùng/vụn)</span></h4>
+      ${d.meta.note ? `<div class="summary">${escapeHtml(d.meta.note)}</div>` : ""}
+      ${cons.length ? `<ul class="findings">` + cons.map((f) => { const sev = (f.severity || "med").toLowerCase(); return `<li class="${sev}"><span class="sev">${sev}</span>${escapeHtml(f.issue)}${(f.from || []).length ? ` <span class="hint">(${escapeHtml((f.from || []).join(", "))})</span>` : ""}</li>`; }).join("") + `</ul>` : `<div class="hint">không còn lỗi đáng sửa sau khi gộp</div>`}
+    </div>`;
+  }
   if ((d.reviews || []).length) {
-    html += `<h3 style="margin:16px 0 4px">🔎 Reviewers ${running ? "(vòng hiện tại)" : "— vòng cuối"} (${d.reviews.length}, song song)</h3>`;
+    html += `<h3 style="margin:16px 0 4px">🔎 Reviewers ${running ? "(vòng hiện tại)" : "— vòng cuối"} (${d.reviews.length}, song song)${d.meta ? " · findings thô trước khi gộp" : ""}</h3>`;
     html += `<div class="review-grid">` + d.reviews.map(rcard).join("") + `</div>`;
   }
   $("#run-results").innerHTML = html;

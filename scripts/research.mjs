@@ -175,6 +175,21 @@ export function reviewMessages({ ticker, company, price, epsHist, forwardEPS, qu
   return [{ role: "system", content: sys }, { role: "user", content: data + `\n\nTrả về DUY NHẤT JSON theo schema:\n${JSON.stringify(schema)}` }];
 }
 
+// META-REVIEWER: gộp findings của nhiều reviewer -> khử trùng lặp, bỏ vụn vặt, chấm lại severity.
+export function metaMessages(ctx, findings) {
+  const { ticker, company, price, epsHist, quant } = ctx;
+  const list = findings.map((f, i) => `${i + 1}. [${f.severity || "med"}] (${f.by || "?"}) ${f.issue}`).join("\n") || "(không có)";
+  const sys = `Bạn là META-REVIEWER (trọng tài). Nhiều reviewer độc lập đã soi một báo cáo cổ phiếu và liệt kê findings (có thể trùng lặp, vụn vặt, hoặc khắt khe quá mức). ` +
+    `Nhiệm vụ: (1) GỘP các finding trùng/tương tự thành MỘT; (2) BỎ finding vụn vặt/pedantic/không ảnh hưởng quyết định đầu tư, và BỎ mọi finding về độ tin/nguồn của forward EPS (forward EPS là số NGƯỜI DÙNG nhập, coi như tin cậy); ` +
+    `(3) Chấm lại severity (high/med/low) theo mức ẢNH HƯỞNG thực sự tới quyết định; ` +
+    `(4) Quyết định report có CẦN SỬA không: 'revise' CHỈ khi còn finding high/med THỰC CHẤT; nếu chỉ còn low/vụn vặt thì 'pass'. ` +
+    `Chỉ trả về DUY NHẤT JSON hợp lệ (không markdown). Viết tiếng Việt.`;
+  const usr = `BỐI CẢNH: ${ticker} (${company}), giá $${price}, EPS quá khứ: ${epsHist}, forward P/E=${quant.forwardPE}, forward PEG=${quant.forwardPEG}.\n` +
+    `FINDINGS THÔ TỪ CÁC REVIEWER:\n${list}\n\n` +
+    `Trả JSON: ${JSON.stringify({ decision: "pass|revise", findings: [{ issue: "đã gộp/viết gọn", severity: "high|med|low", from: ["reviewer model"] }], dropped_count: 0, note: "1 câu vì sao" })}`;
+  return [{ role: "system", content: sys }, { role: "user", content: usr }];
+}
+
 // Ghép: số cứng (Yahoo) + forward EPS NGƯỜI DÙNG nhập + định tính của model -> canonical.
 export function buildCanonical(hard, { forwardEPS = {}, qualRaw = null, modelId = null } = {}) {
   const h = hard.hard;

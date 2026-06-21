@@ -9,7 +9,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { fetchHard, fetchHardYahoo, qualMessages, reviseMessages, buildCanonical, reviewMessages, parseJSONLoose } from "../scripts/research.mjs";
+import { fetchHard, fetchHardYahoo, qualMessages, reviseMessages, buildCanonical, reviewMessages, metaMessages, parseJSONLoose } from "../scripts/research.mjs";
 import { analyze } from "../scripts/engine.mjs";
 import { computeDerived } from "../scripts/lib.mjs";
 
@@ -196,6 +196,18 @@ async function runReviewer(model, ctx, max_tokens = 900) {
   return { model, status, findings, summary: String(j.summary || "").slice(0, 400) };
 }
 
+// META-REVIEWER: gộp & khử trùng lặp findings của nhiều reviewer, chấm lại severity, quyết định revise/pass.
+async function runMeta(model, ctx, rawFindings, max_tokens = 1200) {
+  const raw = await routerChat({ model, messages: metaMessages(ctx, rawFindings), temperature: 0.1, max_tokens });
+  const j = parseJSONLoose(raw);
+  let findings = (Array.isArray(j.findings) ? j.findings : []).slice(0, 12).map((f) => ({
+    issue: String(f.issue || f.text || f).slice(0, 300), severity: (f.severity || "med").toLowerCase(),
+    from: Array.isArray(f.from) ? f.from : Array.isArray(f.sources) ? f.sources : [],
+  })).filter((f) => f.issue && !isEpsTrustFinding(f.issue));
+  const decision = (j.decision === "revise" && findings.length) ? "revise" : "pass";
+  return { model, decision, findings, dropped: Math.max(0, rawFindings.length - findings.length), note: String(j.note || j.summary || "").slice(0, 300) };
+}
+
 // Phần định lượng KHÔNG phụ thuộc model (từ giá Yahoo + forward EPS người dùng).
 function quantOnly(hard, forwardEPS) {
   const canon = buildCanonical(hard, { forwardEPS, qualRaw: null, modelId: null });
@@ -249,10 +261,22 @@ async function runJob(job, hard, forwardEPS) {
       job.phase = `reviewers đang soi (vòng ${iterations}/${job.max_refine})`; saveJob(job);
       const ctx = { ...ctxBase, reportMd: a.report };
       reviews = await Promise.all(job.reviewerModels.map((m) => runReviewer(m, ctx).catch((e) => ({ model: m, error: String(e && e.message ? e.message : e) }))));
-      const issues = reviews.flatMap((r) => (r.findings || []).map((f) => ({ ...f, by: r.model }))).filter((f) => f.issue);
-      const hasIssues = reviews.some((r) => r.status === "revise" && (r.findings || []).length);
-      job.rounds.push({ iter: iterations, verdict: a.verdict, reviews: reviews.map((r) => ({ model: r.model, status: r.status, findings: (r.findings || []).length, error: r.error })) });
-      job.reviews = reviews; job.iterations = iterations; job.writer = writerView(job.writerModel, a, iterations, iterations > 1); saveJob(job);
+      const rawIssues = reviews.flatMap((r) => (r.findings || []).map((f) => ({ ...f, by: r.model }))).filter((f) => f.issue);
+
+      // META-REVIEWER: gộp/khử trùng lặp/chấm severity nếu được bật & có >0 finding.
+      let issues = rawIssues, metaInfo = null;
+      if (job.metaModel && rawIssues.length) {
+        try {
+          const meta = await runMeta(job.metaModel, { ...ctxBase, reportMd: a.report }, rawIssues);
+          issues = meta.findings;
+          metaInfo = { model: job.metaModel, decision: meta.decision, kept: meta.findings.length, raw: rawIssues.length, dropped: meta.dropped, note: meta.note };
+        } catch { /* lỗi meta -> dùng findings thô */ }
+      }
+      const hasIssues = metaInfo ? (metaInfo.decision === "revise" && issues.length > 0)
+        : reviews.some((r) => r.status === "revise" && (r.findings || []).length);
+
+      job.rounds.push({ iter: iterations, verdict: a.verdict, reviews: reviews.map((r) => ({ model: r.model, status: r.status, findings: (r.findings || []).length, error: r.error })), meta: metaInfo });
+      job.reviews = reviews; job.meta = metaInfo; job.consolidated = issues; job.iterations = iterations; job.writer = writerView(job.writerModel, a, iterations, iterations > 1); saveJob(job);
       if (!hasIssues) { resolved = true; break; }
       if (iterations >= job.max_refine) break;
       job.phase = `writer đang sửa theo góp ý (vòng ${iterations + 1})`; saveJob(job);
@@ -327,6 +351,7 @@ const server = http.createServer(async (req, res) => {
       const writer = body.writer || DEFAULT_MODEL;
       let reviewers = Array.isArray(body.reviewers) ? body.reviewers.filter(Boolean) : [];
       reviewers = [...new Set(reviewers)].filter((r) => r !== writer).slice(0, MAX_MODELS);
+      const metaModel = body.metaReviewer && String(body.metaReviewer).trim() ? String(body.metaReviewer).trim() : null;
 
       let hard;
       try { hard = await fetchHardData(ticker); }
@@ -339,9 +364,9 @@ const server = http.createServer(async (req, res) => {
         as_of: hard.as_of, forwardFYs: hard._forwardFYs, forwardEPS, quant,
         eps_actual: hard.hard.eps_actual.map((e) => ({ fy: e.fy, value: e.value })),
         vendor_pegTTM: hard.hard.peg_ttm_vendor?.value ?? null,
-        writerModel: writer, reviewerModels: reviewers,
+        writerModel: writer, reviewerModels: reviewers, metaModel,
         status: "running", phase: "writer đang viết phần định tính", iterations: 0,
-        rounds: [], writer: null, reviews: [], resolved: false, warning: false, max_refine: MAX_REFINE,
+        rounds: [], writer: null, reviews: [], meta: null, consolidated: [], resolved: false, warning: false, max_refine: MAX_REFINE,
       };
       saveJob(job);
       runJob(job, hard, forwardEPS); // CHẠY NỀN — không await
