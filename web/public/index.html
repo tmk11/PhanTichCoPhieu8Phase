@@ -22,11 +22,12 @@
     <div class="runbar">
       <input id="new-ticker" placeholder="Mã, vd TSLA" maxlength="7" autocomplete="off" />
       <button id="btn-load" class="primary">① Lấy dữ liệu</button>
-      <button id="btn-toggle-models" class="ghost">Chọn model ▾</button>
+      <button id="btn-toggle-models" class="ghost">Writer & Reviewers ▾</button>
       <span id="run-status" class="status"></span>
     </div>
     <div id="model-pick" hidden>
-      <div class="pick-tools"><a id="pick-good" href="#">chọn nhóm tốt</a> · <a id="pick-none" href="#">bỏ chọn</a> <span id="pick-count" class="hint"></span></div>
+      <label class="writer-label">✍️ <b>Writer</b> (1 model viết phần định tính): <select id="writer-model"></select></label>
+      <div class="pick-tools">🔎 <b>Reviewers</b> (chạy song song soi &amp; bắt lỗi): <a id="pick-good" href="#">chọn nhóm tốt</a> · <a id="pick-none" href="#">bỏ chọn</a> <span id="pick-count" class="hint"></span></div>
       <div id="model-list" class="model-list"></div>
     </div>
     <div id="eps-form" hidden>

@@ -63,6 +63,26 @@ async function loadModels() {
   MODELS = r; return r;
 }
 
+const WRITER_PREF = ["kr/claude-sonnet-4.5", "gh/gpt-4o", "kr/claude-haiku-4.5", "gh/gpt-4o-mini"];
+function loadModelChecklist() {
+  return fetch("/api/models").then((r) => r.json()).then((r) => {
+    const list = (r.models || []).filter((m) => /^(gh|kr|cl|gemini|kc)\//.test(m));
+    // Writer dropdown
+    const wsel = $("#writer-model"); wsel.innerHTML = "";
+    for (const m of list) { const o = document.createElement("option"); o.value = m; o.textContent = m; wsel.appendChild(o); }
+    wsel.value = WRITER_PREF.find((m) => list.includes(m)) || list[0] || "";
+    // Reviewer checklist
+    const box = $("#model-list"); box.innerHTML = "";
+    for (const m of list) {
+      const lab = document.createElement("label");
+      lab.innerHTML = `<input type="checkbox" value="${m}" ${GOOD_RE.test(m) ? "checked" : ""}/> ${m}`;
+      box.appendChild(lab);
+    }
+    box.addEventListener("change", updatePickCount);
+    updatePickCount();
+  }).catch(() => {});
+}
+
 async function loadOverview() {
   const d = await fetch("/api/summary").then((r) => r.json());
   $("#meta").textContent = `Overall: ${d.overall || "—"} · cập nhật: ${d.generated ? new Date(d.generated).toLocaleString("vi-VN") : "—"} · ${d.rows.length} mã`;
@@ -127,19 +147,6 @@ $("#q").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey
 
 // ================= Chạy mã mới (đa model song song) =================
 const GOOD_RE = /^(gh\/gpt-4o-mini|kr\/claude-haiku-4\.5|gh\/gpt-4o|kr\/claude-sonnet-4\.5)$/;
-async function loadModelChecklist() {
-  const r = await fetch("/api/models").then((r) => r.json()).catch(() => ({ models: [] }));
-  const list = (r.models || []).filter((m) => /^(gh|kr|cl|gemini|kc)\//.test(m));
-  const box = $("#model-list"); box.innerHTML = "";
-  for (const m of list) {
-    const id = "m_" + m.replace(/[^a-z0-9]/gi, "_");
-    const lab = document.createElement("label");
-    lab.innerHTML = `<input type="checkbox" value="${m}" ${GOOD_RE.test(m) ? "checked" : ""}/> ${m}`;
-    box.appendChild(lab);
-  }
-  box.addEventListener("change", updatePickCount);
-  updatePickCount();
-}
 function pickedModels() { return [...document.querySelectorAll("#model-list input:checked")].map((i) => i.value); }
 function updatePickCount() { $("#pick-count").textContent = `(${pickedModels().length} model đã chọn, tối đa 6)`; }
 
@@ -175,17 +182,16 @@ async function runNew() {
   const ticker = HARD.ticker;
   const forwardEPS = collectEPS();
   if (!Object.keys(forwardEPS).length) { $("#run-status").textContent = "Hãy nhập forward EPS ít nhất 1 năm"; return; }
-  let models = pickedModels();
-  if (!models.length) { $("#model-pick").hidden = false; $("#run-status").textContent = "Hãy chọn ít nhất 1 model (cho phần định tính)"; return; }
-  models = models.slice(0, 6);
+  const writer = $("#writer-model").value;
+  const reviewers = pickedModels().filter((m) => m !== writer).slice(0, 6);
   $("#btn-run").disabled = true;
-  $("#run-status").textContent = `Đang chạy ${ticker} · ${models.length} model (định tính song song)…`;
+  $("#run-status").textContent = `Writer ${writer} viết… rồi ${reviewers.length} reviewer soi song song…`;
   $("#run-results").innerHTML = "";
   try {
     const t0 = Date.now();
-    const d = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker, forwardEPS, models }) }).then((r) => r.json());
+    const d = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker, forwardEPS, writer, reviewers }) }).then((r) => r.json());
     if (d.error) throw new Error(d.error);
-    $("#run-status").textContent = `${ticker} · ${((Date.now() - t0) / 1000).toFixed(1)}s · ${d.results.length} model`;
+    $("#run-status").textContent = `${ticker} · ${((Date.now() - t0) / 1000).toFixed(1)}s · writer + ${d.reviews.length} reviewer`;
     renderRun(d);
   } catch (e) { $("#run-status").textContent = "Lỗi: " + (e.message || e); }
   finally { $("#btn-run").disabled = false; }
@@ -193,6 +199,7 @@ async function runNew() {
 
 function renderRun(d) {
   const q = d.quant || {};
+  const w = d.writer || {};
   const epsUsed = Object.entries(d.forwardEPS || {}).map(([fy, v]) => `FY${fy}=${v}`).join(", ");
   const pegCls = q.forwardPEG != null ? (q.forwardPEG < 1 ? "cheap" : "rich") : "";
   let html = `<div class="run-head"><b>${d.ticker}</b> — ${d.company} · ${d.sector} · giá $${d.price} · forward EPS bạn nhập: <b>${epsUsed || "—"}</b></div>`;
@@ -202,10 +209,33 @@ function renderRun(d) {
     <div>forward PEG<b class="${pegCls}">${fmt(q.forwardPEG)}</b></div>
     <div>vendor pegTTM<b>${fmt(q.vendor_pegTTM)}</b></div>
   </div>`;
-  html += `<div class="disp">✅ PEG tính từ giá Yahoo + forward EPS bạn nhập ⇒ <b>giống nhau ở mọi model</b> (hết phân tán). Bên dưới: phần ĐỊNH TÍNH mỗi model khác nhau.</div>`;
-  html += `<div class="cmp">` + d.results.map(mcard).join("") + `</div>`;
+  // Writer block
+  const wguards = (w.checks || []).map((c) => `<span class="gpill ${c.status}" title="${c.id}">${c.id.split("_")[0]}</span>`).join("");
+  html += `<div class="writer-block card">
+    <h4>✍️ Writer: ${w.writer || "?"} <span class="badge ${w.verdict}">${w.verdict || "—"}</span></h4>
+    <div class="guards-mini">${wguards}</div>
+    <details open><summary>Báo cáo định tính (writer)</summary><div class="md">${md2html(w.report || "")}</div></details>
+  </div>`;
+  // Reviewers
+  html += `<h3 style="margin:16px 0 4px">🔎 Reviewers soi lỗi (${(d.reviews || []).length}, chạy song song)</h3>`;
+  html += `<div class="review-grid">` + (d.reviews || []).map(rcard).join("") + `</div>`;
   $("#run-results").innerHTML = html;
 }
+
+function rcard(r) {
+  if (r.error) return `<div class="rcard"><h4>${r.model}</h4><div class="err">✗ ${r.error}</div></div>`;
+  const badge = r.status === "pass" ? `<span class="badge pass">PASS</span>` : r.status === "revise" ? `<span class="badge revise">CẦN SỬA</span>` : `<span class="badge PARTIAL">?</span>`;
+  const findings = (r.findings || []).map((f) => {
+    const sev = (f.severity || "med").toLowerCase();
+    return `<li class="${sev}"><span class="sev">${sev}</span>${escapeHtml(f.issue)}${f.section ? ` <span class="hint">(${escapeHtml(f.section)})</span>` : ""}</li>`;
+  }).join("");
+  return `<div class="rcard">
+    <h4>${r.model} ${badge}</h4>
+    ${r.summary ? `<div class="summary">${escapeHtml(r.summary)}</div>` : ""}
+    ${findings ? `<ul class="findings">${findings}</ul>` : `<div class="hint">không nêu lỗi cụ thể</div>`}
+  </div>`;
+}
+function escapeHtml(s) { return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 
 function mcard(r) {
   if (r.error) return `<div class="mcard"><h4>${r.model}</h4><div class="err">✗ ${r.error}</div></div>`;

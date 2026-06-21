@@ -9,7 +9,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { fetchHard, fetchHardYahoo, qualMessages, buildCanonical } from "../scripts/research.mjs";
+import { fetchHard, fetchHardYahoo, qualMessages, buildCanonical, reviewMessages, parseJSONLoose } from "../scripts/research.mjs";
 import { analyze } from "../scripts/engine.mjs";
 import { computeDerived } from "../scripts/lib.mjs";
 
@@ -157,18 +157,29 @@ function buildMessages(mode, ticker, question, reportText, spec) {
   ];
 }
 
-// Chạy 8-phase cho 1 (mã, model): forward EPS = NGƯỜI DÙNG nhập; model chỉ làm định tính.
-async function runOneModel(hard, model, forwardEPS, max_tokens = 1500) {
+// WRITER: 1 model viết phần định tính -> ghép forward EPS người dùng -> derive/build/verify.
+async function runWriter(hard, model, forwardEPS, max_tokens = 1500) {
   const raw = await routerChat({ model, messages: qualMessages(hard), temperature: 0.3, max_tokens });
   const canon = buildCanonical(hard, { forwardEPS, qualRaw: raw, modelId: model });
   const a = analyze(canon, RUBRIC);
   return {
-    model, verdict: a.verdict, forward_source: a.forward_source,
+    writer: model, verdict: a.verdict, forward_source: a.forward_source,
     forwardPE: a.forwardPE, fy: a.fy, cagr_pct: a.cagr_pct, forwardPEG: a.forwardPEG,
     vendor_pegTTM: a.vendor_pegTTM, flags: a.flags,
     checks: a.checks.map((c) => ({ id: c.id, status: c.status, critical: c.critical })),
     report: a.report,
   };
+}
+
+// REVIEWER: model độc lập soi báo cáo của writer để bắt lỗi.
+async function runReviewer(model, ctx, max_tokens = 900) {
+  const raw = await routerChat({ model, messages: reviewMessages(ctx), temperature: 0.2, max_tokens });
+  const j = parseJSONLoose(raw);
+  const status = j.status === "revise" ? "revise" : j.status === "pass" ? "pass" : "?";
+  const findings = Array.isArray(j.findings) ? j.findings.slice(0, 8).map((f) => ({
+    issue: String(f.issue || f.text || f).slice(0, 300), severity: f.severity || "med", section: f.section || "",
+  })) : [];
+  return { model, status, findings, summary: String(j.summary || "").slice(0, 400) };
 }
 
 // Phần định lượng KHÔNG phụ thuộc model (từ giá Yahoo + forward EPS người dùng).
@@ -237,9 +248,9 @@ const server = http.createServer(async (req, res) => {
       if (!TICKER_RE.test(ticker)) return sendJSON(res, 400, { error: "Mã không hợp lệ (chữ in hoa, tối đa 7 ký tự)" });
       const forwardEPS = parseForwardEPS(body.forwardEPS);
       if (!Object.keys(forwardEPS).length) return sendJSON(res, 400, { error: "Hãy nhập forward EPS ít nhất 1 năm (lấy từ TradingView)" });
-      let models = Array.isArray(body.models) ? body.models.filter(Boolean) : [];
-      if (!models.length) models = [DEFAULT_MODEL];
-      models = [...new Set(models)].slice(0, MAX_MODELS);
+      const writer = body.writer || DEFAULT_MODEL;
+      let reviewers = Array.isArray(body.reviewers) ? body.reviewers.filter(Boolean) : [];
+      reviewers = [...new Set(reviewers)].filter((r) => r !== writer).slice(0, MAX_MODELS);
 
       let hard;
       try { hard = await fetchHardData(ticker); }
@@ -247,15 +258,23 @@ const server = http.createServer(async (req, res) => {
 
       const t0 = Date.now();
       const quant = quantOnly(hard, forwardEPS); // PEG model-independent (giá Yahoo + EPS người dùng)
-      const results = await Promise.all(models.map((m) =>
-        runOneModel(hard, m, forwardEPS).catch((e) => ({ model: m, error: String(e && e.message ? e.message : e) }))));
+      // 1) WRITER viết định tính
+      let w;
+      try { w = await runWriter(hard, writer, forwardEPS); }
+      catch (e) { return sendJSON(res, 502, { error: `Writer (${writer}) lỗi: ` + String(e.message || e) }); }
+      // 2) REVIEWERS soi song song
+      const epsHist = hard.hard.eps_actual.map((e) => `FY${e.fy}=${e.value}`).join(", ");
+      const ctx = { ticker, company: hard.hard.company, price: hard.hard.price.value, epsHist, forwardEPS,
+        quant: { forwardPE: quant.forwardPE, cagr_pct: quant.cagr_pct, forwardPEG: quant.forwardPEG }, reportMd: w.report };
+      const reviews = await Promise.all(reviewers.map((m) =>
+        runReviewer(m, ctx).catch((e) => ({ model: m, error: String(e && e.message ? e.message : e) }))));
       return sendJSON(res, 200, {
         ticker, company: hard.hard.company, sector: hard.hard.sector,
         price: hard.hard.price.value, as_of: hard.as_of, forwardFYs: hard._forwardFYs,
-        forwardEPS, quant,
+        forwardEPS, quant, writer: w, reviews,
         eps_actual: hard.hard.eps_actual.map((e) => ({ fy: e.fy, value: e.value })),
         vendor_pegTTM: hard.hard.peg_ttm_vendor?.value ?? null,
-        ms: Date.now() - t0, results,
+        ms: Date.now() - t0,
       });
     }
     if (p.startsWith("/api/")) return sendJSON(res, 404, { error: "endpoint không tồn tại" });

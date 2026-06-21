@@ -100,12 +100,30 @@ export function qualMessages(hard) {
   return [{ role: "system", content: sys }, { role: "user", content: usr }];
 }
 
-function extractJSON(s) {
+export function parseJSONLoose(s) {
   if (!s) return {};
   let txt = String(s).trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   const a = txt.indexOf("{"), b = txt.lastIndexOf("}");
   if (a < 0 || b < 0) return {};
   try { return JSON.parse(txt.slice(a, b + 1)); } catch { return {}; }
+}
+const extractJSON = parseJSONLoose;
+
+// Prompt cho REVIEWER context-mới: soi báo cáo để BẮT LỖI (không viết lại, không bịa số).
+export function reviewMessages({ ticker, company, price, epsHist, forwardEPS, quant, reportMd }) {
+  const fwd = Object.entries(forwardEPS || {}).map(([fy, v]) => `FY${fy}=${v}`).join(", ") || "(chưa nhập)";
+  const sys = `Bạn là REVIEWER ĐỘC LẬP, context mới. Nhiệm vụ DUY NHẤT: soi báo cáo phân tích cổ phiếu để BẮT LỖI. ` +
+    `Chỉ trả về JSON hợp lệ (không markdown, không văn xuôi ngoài JSON). KHÔNG viết lại báo cáo, KHÔNG tự bịa số mới. ` +
+    `Soi 4 nhóm: (1) khẳng định BỊA/không có cơ sở, (2) NÓI QUÁ/hype, (3) MÂU THUẪN với số liệu, ` +
+    `(4) THIẾU caveat quan trọng (chu kỳ & bẫy P/E đỉnh, nền lỗ→lãi, FCF âm, độ tin của forward EPS). ` +
+    `Nếu báo cáo ổn, status="pass"; nếu có lỗi cần sửa, status="revise".`;
+  const data = `DỮ LIỆU CỨNG (chuẩn để đối chiếu):\n` +
+    `- Mã ${ticker} (${company}), giá hiện tại $${price}\n- EPS quá khứ (GAAP): ${epsHist}\n` +
+    `- forward EPS (người dùng nhập từ TradingView): ${fwd}\n` +
+    `- Số tự tính (code): forward P/E=${quant.forwardPE}, CAGR=${quant.cagr_pct}%, forward PEG=${quant.forwardPEG}\n\n` +
+    `BÁO CÁO CẦN SOI:\n${reportMd}`;
+  const schema = { status: "pass|revise", findings: [{ issue: "mô tả lỗi ngắn", severity: "low|med|high", section: "mục nào" }], summary: "1-2 câu kết luận" };
+  return [{ role: "system", content: sys }, { role: "user", content: data + `\n\nTrả về DUY NHẤT JSON theo schema:\n${JSON.stringify(schema)}` }];
 }
 
 // Ghép: số cứng (Yahoo) + forward EPS NGƯỜI DÙNG nhập + định tính của model -> canonical.

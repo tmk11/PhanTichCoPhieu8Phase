@@ -76,3 +76,16 @@ button:disabled{opacity:.5;cursor:wait}
 .eps-inputs input{width:110px;background:#0e1420;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-variant-numeric:tabular-nums}
 .quant-kpis{display:flex;gap:18px;flex-wrap:wrap;margin:8px 0}
 .quant-kpis div{font-size:12px;color:var(--mut)}.quant-kpis b{display:block;font-size:20px;color:var(--fg)}
+.writer-label{display:block;font-size:13px;color:#c8d3df;margin:4px 0 10px}
+.writer-label select{width:auto;display:inline-block;min-width:220px;margin-left:6px}
+.writer-block{margin-top:8px}
+.badge.revise{background:rgba(210,153,34,.15);color:#e3b341;border:1px solid #d2992244}
+.badge.pass{background:rgba(46,160,67,.15);color:#3fb950;border:1px solid #2ea04344}
+.review-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:8px}
+.rcard{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+.rcard h4{margin:0 0 6px;font-size:13px;color:#cdd9e5;word-break:break-all}
+.rcard .summary{font-size:12.5px;color:#c8d3df;margin:6px 0}
+.findings{list-style:none;padding:0;margin:6px 0}
+.findings li{font-size:12px;padding:4px 8px;border-radius:6px;margin:4px 0;border-left:3px solid var(--line);background:#0e1420}
+.findings li.high{border-color:#f85149}.findings li.med{border-color:#d29922}.findings li.low{border-color:#3b82f6}
+.sev{font-size:10px;text-transform:uppercase;opacity:.8;margin-right:5px}
