@@ -177,6 +177,9 @@ function collectEPS() {
   return m;
 }
 
+const LS_CUR = "sp_current_job";
+let POLL = null;
+
 async function runNew() {
   if (!HARD) { $("#run-status").textContent = "Bấm ① Lấy dữ liệu trước"; return; }
   const ticker = HARD.ticker;
@@ -185,23 +188,40 @@ async function runNew() {
   const writer = $("#writer-model").value;
   const reviewers = pickedModels().filter((m) => m !== writer).slice(0, 6);
   $("#btn-run").disabled = true;
-  $("#run-status").textContent = `Writer ${writer} viết… rồi ${reviewers.length} reviewer soi song song…`;
+  $("#run-status").textContent = "Đang khởi tạo…";
   $("#run-results").innerHTML = "";
   try {
-    const t0 = Date.now();
     const d = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker, forwardEPS, writer, reviewers }) }).then((r) => r.json());
     if (d.error) throw new Error(d.error);
-    $("#run-status").textContent = `${ticker} · ${((Date.now() - t0) / 1000).toFixed(1)}s · writer + ${d.reviews.length} reviewer`;
-    renderRun(d);
+    localStorage.setItem(LS_CUR, d.id);
+    renderJob(d);            // hiện ngay 4 chỉ số định lượng
+    startPolling(d.id);      // phân tích AI hiện dần
+    loadHistory();
   } catch (e) { $("#run-status").textContent = "Lỗi: " + (e.message || e); }
   finally { $("#btn-run").disabled = false; }
 }
 
-function renderRun(d) {
+function startPolling(id) {
+  if (POLL) clearInterval(POLL);
+  POLL = setInterval(async () => {
+    try {
+      const j = await fetch("/api/job/" + id).then((r) => r.json());
+      if (j.error) { clearInterval(POLL); POLL = null; return; }
+      renderJob(j);
+      if (j.status !== "running") { clearInterval(POLL); POLL = null; loadHistory(); }
+    } catch { /* giữ poll, thử lại */ }
+  }, 2000);
+}
+
+// Hiển thị: 4 chỉ số ĐỊNH LƯỢNG trước (luôn có), phần phân tích AI hiện dần theo job.status.
+function renderJob(d) {
   const q = d.quant || {};
-  const w = d.writer || {};
+  const w = d.writer || null;
+  const running = d.status === "running";
   const epsUsed = Object.entries(d.forwardEPS || {}).map(([fy, v]) => `FY${fy}=${v}`).join(", ");
   const pegCls = q.forwardPEG != null ? (q.forwardPEG < 1 ? "cheap" : "rich") : "";
+  $("#run-status").textContent = running ? `⏳ ${d.phase || "đang chạy"}…` : (d.status === "error" ? "Lỗi: " + (d.error || "") : `✓ xong · ${d.ms ? (d.ms / 1000).toFixed(1) + "s" : ""}`);
+
   let html = `<div class="run-head"><b>${d.ticker}</b> — ${d.company} · ${d.sector} · giá $${d.price} · forward EPS bạn nhập: <b>${epsUsed || "—"}</b></div>`;
   html += `<div class="quant-kpis">
     <div>forward P/E (FY${q.fy})<b>${fmt(q.forwardPE)}</b></div>
@@ -209,31 +229,70 @@ function renderRun(d) {
     <div>forward PEG<b class="${pegCls}">${fmt(q.forwardPEG)}</b></div>
     <div>vendor pegTTM<b>${fmt(q.vendor_pegTTM)}</b></div>
   </div>`;
-  // Refine status
-  if (d.warning) {
-    html += `<div class="warn-box">⚠️ <b>Sau ${d.iterations}/${d.max_refine} vòng refine, reviewer VẪN còn phát hiện lỗi.</b> Báo cáo vẫn hiển thị bên dưới nhưng hãy ĐỌC THẬN TRỌNG — xem các lỗi còn lại ở phần reviewer.</div>`;
-  } else {
-    html += `<div class="ok-box">✅ Reviewer hết lỗi sau ${d.iterations} vòng refine (writer tự sửa theo góp ý).</div>`;
-  }
-  // refine timeline
+  html += `<div class="hint">✅ 4 chỉ số trên tính từ giá Yahoo + forward EPS bạn nhập (có ngay, không đợi AI).</div>`;
+
+  // refine timeline (cập nhật dần)
   if ((d.rounds || []).length) {
     html += `<div class="rounds">` + d.rounds.map((rd) => {
       const tot = rd.reviews.reduce((s, x) => s + (x.findings || 0), 0);
       const ok = rd.reviews.every((x) => x.status === "pass");
       return `<span class="round ${ok ? "ok" : "bad"}">vòng ${rd.iter}: ${ok ? "sạch" : tot + " lỗi"}</span>`;
-    }).join(" → ") + `</div>`;
+    }).join(" → ") + (running ? ` <span class="round">…</span>` : "") + `</div>`;
   }
-  // Writer block
-  const wguards = (w.checks || []).map((c) => `<span class="gpill ${c.status}" title="${c.id}">${c.id.split("_")[0]}</span>`).join("");
-  html += `<div class="writer-block card">
-    <h4>✍️ Writer: ${w.writer || "?"} <span class="badge ${w.verdict}">${w.verdict || "—"}</span> ${w.refined ? `<span class="hint">(đã refine ${w.iterations} vòng)</span>` : ""}</h4>
-    <div class="guards-mini">${wguards}</div>
-    <details open><summary>Báo cáo định tính (bản cuối)</summary><div class="md">${md2html(w.report || "")}</div></details>
-  </div>`;
-  // Reviewers (vòng cuối)
-  html += `<h3 style="margin:16px 0 4px">🔎 Reviewers — vòng cuối (${(d.reviews || []).length}, song song)</h3>`;
-  html += `<div class="review-grid">` + (d.reviews || []).map(rcard).join("") + `</div>`;
+
+  if (running) {
+    html += `<div class="ok-box">🧠 Phần phân tích AI đang chạy: <b>${d.phase || ""}</b>. Bạn có thể đóng tab — kết quả vẫn lưu, mở lại xem ở "Lịch sử".</div>`;
+  } else if (d.status === "error") {
+    html += `<div class="warn-box">Lỗi khi chạy phân tích: ${escapeHtml(d.error || "")}</div>`;
+  } else if (d.warning) {
+    html += `<div class="warn-box">⚠️ <b>Sau ${d.iterations}/${d.max_refine} vòng refine, reviewer VẪN còn lỗi.</b> Báo cáo vẫn hiển thị nhưng hãy ĐỌC THẬN TRỌNG.</div>`;
+  } else {
+    html += `<div class="ok-box">✅ Reviewer hết lỗi sau ${d.iterations} vòng refine.</div>`;
+  }
+
+  if (w) {
+    const wguards = (w.checks || []).map((c) => `<span class="gpill ${c.status}" title="${c.id}">${c.id.split("_")[0]}</span>`).join("");
+    html += `<div class="writer-block card">
+      <h4>✍️ Writer: ${w.writer || d.writerModel || "?"} <span class="badge ${w.verdict}">${w.verdict || "—"}</span> ${w.refined ? `<span class="hint">(đã refine ${w.iterations} vòng)</span>` : ""}</h4>
+      <div class="guards-mini">${wguards}</div>
+      <details ${running ? "" : "open"}><summary>Báo cáo định tính${running ? " (bản tạm — đang refine)" : " (bản cuối)"}</summary><div class="md">${md2html(w.report || "")}</div></details>
+    </div>`;
+  } else if (running) {
+    html += `<div class="writer-block card"><h4>✍️ Writer ${d.writerModel || ""} đang viết…</h4></div>`;
+  }
+  if ((d.reviews || []).length) {
+    html += `<h3 style="margin:16px 0 4px">🔎 Reviewers ${running ? "(vòng hiện tại)" : "— vòng cuối"} (${d.reviews.length}, song song)</h3>`;
+    html += `<div class="review-grid">` + d.reviews.map(rcard).join("") + `</div>`;
+  }
   $("#run-results").innerHTML = html;
+}
+
+async function loadHistory() {
+  try {
+    const d = await fetch("/api/history").then((r) => r.json());
+    const list = d.jobs || [];
+    if (!list.length) return;
+    $("#history-sec").hidden = false;
+    $("#history-list").innerHTML = list.map((j) => {
+      const st = j.status === "running" ? "⏳" : j.warning ? "⚠️" : j.status === "error" ? "✗" : "✅";
+      const t = j.ts ? new Date(j.ts).toLocaleString("vi-VN") : "";
+      return `<div class="hist-row" data-id="${j.id}"><span class="tk">${j.ticker}</span> <span>PEG ${fmt(j.forwardPEG)}</span> <span class="hint">${st} ${j.iterations || 0} vòng · ${t}</span></div>`;
+    }).join("");
+    document.querySelectorAll(".hist-row").forEach((el) => { el.onclick = () => openJob(el.dataset.id); });
+  } catch { /* bỏ qua */ }
+}
+
+async function openJob(id) {
+  if (POLL) { clearInterval(POLL); POLL = null; }
+  $("#run-results").innerHTML = "<p class='hint'>đang tải…</p>";
+  try {
+    const j = await fetch("/api/job/" + id).then((r) => r.json());
+    if (j.error) throw new Error(j.error);
+    localStorage.setItem(LS_CUR, id);
+    renderJob(j);
+    $("#runner").scrollIntoView({ behavior: "smooth", block: "start" });
+    if (j.status === "running") startPolling(id);
+  } catch (e) { $("#run-results").innerHTML = "<p class='hint'>Lỗi: " + (e.message || e) + "</p>"; }
 }
 
 function rcard(r) {
@@ -279,3 +338,7 @@ $("#pick-none").onclick = (e) => { e.preventDefault(); document.querySelectorAll
 
 loadOverview().catch((e) => { $("#meta").textContent = "Lỗi tải dữ liệu: " + e.message; });
 loadModelChecklist();
+loadHistory();
+// Khôi phục job gần nhất khi mở lại trang (reload / mở lại tab)
+const _cur = localStorage.getItem(LS_CUR);
+if (_cur) openJob(_cur).catch(() => {});

@@ -94,3 +94,5 @@ button:disabled{opacity:.5;cursor:wait}
 .rounds{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0 12px;font-size:12px;color:var(--mut)}
 .round{padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
 .round.ok{color:#3fb950;border-color:#2ea04344}.round.bad{color:#e3b341;border-color:#d2992244}
+.hist-row{display:flex;gap:14px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13px;font-variant-numeric:tabular-nums}
+.hist-row:hover{background:#1b2433}.hist-row .tk{font-weight:700;min-width:54px}

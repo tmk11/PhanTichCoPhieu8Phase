@@ -203,6 +203,59 @@ function parseForwardEPS(obj) {
   return m;
 }
 
+// ---- Job store: chạy nền + lịch sử BỀN VỮNG (ghi ra đĩa) ----
+const JOBS_DIR = path.join(ROOT, "jobruns");
+try { fs.mkdirSync(JOBS_DIR, { recursive: true }); } catch {}
+const jobs = new Map();
+const jobPublic = (j) => { const { _t0, ...rest } = j; return rest; };
+function saveJob(j) { jobs.set(j.id, j); try { fs.writeFileSync(path.join(JOBS_DIR, j.id + ".json"), JSON.stringify(jobPublic(j))); } catch {} }
+function getJob(id) {
+  if (!/^[a-zA-Z0-9_-]{6,50}$/.test(id || "")) return null;
+  if (jobs.has(id)) return jobs.get(id);
+  try { const j = JSON.parse(fs.readFileSync(path.join(JOBS_DIR, id + ".json"), "utf8")); jobs.set(id, j); return j; } catch { return null; }
+}
+function listJobs(limit = 100) {
+  try {
+    return fs.readdirSync(JOBS_DIR).filter((f) => f.endsWith(".json")).map((f) => {
+      try {
+        const j = JSON.parse(fs.readFileSync(path.join(JOBS_DIR, f), "utf8"));
+        return { id: j.id, ticker: j.ticker, company: j.company, ts: j.ts, forwardPEG: j.quant?.forwardPEG, forwardPE: j.quant?.forwardPE, status: j.status, warning: j.warning, iterations: j.iterations, writer: j.writerModel };
+      } catch { return null; }
+    }).filter(Boolean).sort((a, b) => String(b.ts).localeCompare(String(a.ts))).slice(0, limit);
+  } catch { return []; }
+}
+const newId = () => Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+
+// Chạy vòng refine ở NỀN, cập nhật job sau mỗi bước (frontend poll để xem tiến trình).
+async function runJob(job, hard, forwardEPS) {
+  try {
+    const epsHist = hard.hard.eps_actual.map((e) => `FY${e.fy}=${e.value}`).join(", ");
+    const ctxBase = { ticker: job.ticker, company: job.company, price: job.price, epsHist, forwardEPS, quant: { forwardPE: job.quant.forwardPE, cagr_pct: job.quant.cagr_pct, forwardPEG: job.quant.forwardPEG } };
+    let { qualRaw, a } = await writeQual(hard, job.writerModel, forwardEPS, qualMessages(hard));
+    job.writer = writerView(job.writerModel, a, 1, false); saveJob(job);
+    let iterations = 0, resolved = false, reviews = [];
+    while (true) {
+      iterations++;
+      job.phase = `reviewers đang soi (vòng ${iterations}/${job.max_refine})`; saveJob(job);
+      const ctx = { ...ctxBase, reportMd: a.report };
+      reviews = await Promise.all(job.reviewerModels.map((m) => runReviewer(m, ctx).catch((e) => ({ model: m, error: String(e && e.message ? e.message : e) }))));
+      const issues = reviews.flatMap((r) => (r.findings || []).map((f) => ({ ...f, by: r.model }))).filter((f) => f.issue);
+      const hasIssues = reviews.some((r) => r.status === "revise" && (r.findings || []).length);
+      job.rounds.push({ iter: iterations, verdict: a.verdict, reviews: reviews.map((r) => ({ model: r.model, status: r.status, findings: (r.findings || []).length, error: r.error })) });
+      job.reviews = reviews; job.iterations = iterations; job.writer = writerView(job.writerModel, a, iterations, iterations > 1); saveJob(job);
+      if (!hasIssues) { resolved = true; break; }
+      if (iterations >= job.max_refine) break;
+      job.phase = `writer đang sửa theo góp ý (vòng ${iterations + 1})`; saveJob(job);
+      try { ({ qualRaw, a } = await writeQual(hard, job.writerModel, forwardEPS, reviseMessages(hard, qualRaw, issues))); }
+      catch { break; }
+      job.writer = writerView(job.writerModel, a, iterations + 1, true); saveJob(job);
+    }
+    job.resolved = resolved; job.warning = !resolved; job.status = "done"; job.phase = "hoàn tất"; job.ms = Date.now() - job._t0; saveJob(job);
+  } catch (e) {
+    job.status = "error"; job.error = String(e && e.message ? e.message : e); job.phase = "lỗi"; saveJob(job);
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
@@ -246,6 +299,11 @@ const server = http.createServer(async (req, res) => {
         vendor_pegTTM: hard.hard.peg_ttm_vendor?.value ?? null, eps_ttm: hard.hard.eps_ttm?.value ?? null,
       });
     }
+    if (p === "/api/history") return sendJSON(res, 200, { jobs: listJobs() });
+    if (p.startsWith("/api/job/")) {
+      const j = getJob(decodeURIComponent(p.slice("/api/job/".length)));
+      return j ? sendJSON(res, 200, jobPublic(j)) : sendJSON(res, 404, { error: "job không tồn tại" });
+    }
     if (p === "/api/run" && req.method === "POST") {
       const body = JSON.parse((await readBody(req)) || "{}");
       const ticker = String(body.ticker || "").toUpperCase().trim();
@@ -260,43 +318,20 @@ const server = http.createServer(async (req, res) => {
       try { hard = await fetchHardData(ticker); }
       catch (e) { return sendJSON(res, 400, { error: `RESEARCH (${DATA_SOURCE}) lỗi: ` + String(e.message || e) }); }
 
-      const t0 = Date.now();
-      const quant = quantOnly(hard, forwardEPS); // PEG model-independent (giá Yahoo + EPS người dùng)
-      const epsHist = hard.hard.eps_actual.map((e) => `FY${e.fy}=${e.value}`).join(", ");
-      const ctxBase = { ticker, company: hard.hard.company, price: hard.hard.price.value, epsHist, forwardEPS,
-        quant: { forwardPE: quant.forwardPE, cagr_pct: quant.cagr_pct, forwardPEG: quant.forwardPEG } };
-
-      // VÒNG REFINE: writer viết -> reviewers soi song song -> writer sửa -> ... (tối đa 4 vòng)
-      let qualRaw, a;
-      try { ({ qualRaw, a } = await writeQual(hard, writer, forwardEPS, qualMessages(hard))); }
-      catch (e) { return sendJSON(res, 502, { error: `Writer (${writer}) lỗi: ` + String(e.message || e) }); }
-
-      let reviews = [], iterations = 0, resolved = false;
-      const rounds = [];
-      while (true) {
-        iterations++;
-        const ctx = { ...ctxBase, reportMd: a.report };
-        reviews = await Promise.all(reviewers.map((m) =>
-          runReviewer(m, ctx).catch((e) => ({ model: m, error: String(e && e.message ? e.message : e) }))));
-        const issues = reviews.flatMap((r) => (r.findings || []).map((f) => ({ ...f, by: r.model }))).filter((f) => f.issue);
-        const hasIssues = reviews.some((r) => r.status === "revise" && (r.findings || []).length);
-        rounds.push({ iter: iterations, verdict: a.verdict, reviews: reviews.map((r) => ({ model: r.model, status: r.status, findings: (r.findings || []).length, error: r.error })) });
-        if (!hasIssues) { resolved = true; break; }
-        if (iterations >= MAX_REFINE) break; // hết quota -> dừng, sẽ cảnh báo
-        try { ({ qualRaw, a } = await writeQual(hard, writer, forwardEPS, reviseMessages(hard, qualRaw, issues))); }
-        catch { break; } // revise lỗi -> giữ bản hiện tại
-      }
-
-      return sendJSON(res, 200, {
-        ticker, company: hard.hard.company, sector: hard.hard.sector,
-        price: hard.hard.price.value, as_of: hard.as_of, forwardFYs: hard._forwardFYs,
-        forwardEPS, quant,
-        writer: writerView(writer, a, iterations, iterations > 1),
-        reviews, iterations, resolved, warning: !resolved, max_refine: MAX_REFINE, rounds,
+      const quant = quantOnly(hard, forwardEPS); // ĐỊNH LƯỢNG sẵn ngay (giá Yahoo + EPS người dùng)
+      const job = {
+        id: newId(), ts: new Date().toISOString(), _t0: Date.now(),
+        ticker, company: hard.hard.company, sector: hard.hard.sector, price: hard.hard.price.value,
+        as_of: hard.as_of, forwardFYs: hard._forwardFYs, forwardEPS, quant,
         eps_actual: hard.hard.eps_actual.map((e) => ({ fy: e.fy, value: e.value })),
         vendor_pegTTM: hard.hard.peg_ttm_vendor?.value ?? null,
-        ms: Date.now() - t0,
-      });
+        writerModel: writer, reviewerModels: reviewers,
+        status: "running", phase: "writer đang viết phần định tính", iterations: 0,
+        rounds: [], writer: null, reviews: [], resolved: false, warning: false, max_refine: MAX_REFINE,
+      };
+      saveJob(job);
+      runJob(job, hard, forwardEPS); // CHẠY NỀN — không await
+      return sendJSON(res, 200, jobPublic(job)); // trả ngay: có jobId + quant
     }
     if (p.startsWith("/api/")) return sendJSON(res, 404, { error: "endpoint không tồn tại" });
 
