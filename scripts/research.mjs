@@ -81,102 +81,87 @@ export async function fetchHardYahoo(ticker, { python, script, timeoutMs = 30000
   };
 }
 
-// Prompt cho model: trả về JSON forward EPS + định tính. KHÔNG bịa số cứng.
-export function researchMessages(hard) {
+// Prompt cho model: CHỈ phần ĐỊNH TÍNH (forward EPS đã do người dùng nhập, không cần model đoán).
+export function qualMessages(hard) {
   const h = hard.hard;
   const epsHist = h.eps_actual.map((e) => `FY${e.fy}=${e.value}`).join(", ");
-  const sys = `Bạn là analyst định lượng. Bạn ĐƯỢC CHO sẵn số cứng (giá, EPS quá khứ) và CHỈ được trả về JSON hợp lệ (không markdown, không giải thích ngoài JSON). ` +
-    `TUYỆT ĐỐI KHÔNG bịa số cứng. Forward EPS là ƯỚC LƯỢNG của bạn — nếu không đủ tự tin cho năm nào thì để value:null. ` +
-    `Mỗi forward EPS phải kèm "basis" (1 câu lý do/cơ sở) và "confidence" (low|med|high). Trả lời định tính bằng tiếng Việt.`;
+  const sys = `Bạn là analyst cổ phiếu. Forward EPS ĐÃ do người dùng cung cấp (lấy từ TradingView) — bạn KHÔNG cần và KHÔNG được đoán forward EPS. ` +
+    `Nhiệm vụ của bạn CHỈ là phần ĐỊNH TÍNH. Trả về DUY NHẤT JSON hợp lệ (không markdown, không văn xuôi ngoài JSON). Viết tiếng Việt.`;
   const schema = {
     company: "string", sector: "string", fiscal_year_end_month: "1-12",
-    cyclical: "boolean", cyclical_reason: "string (nếu cyclical: nêu vì sao + rủi ro bẫy P/E đỉnh)",
+    cyclical: "boolean", cyclical_reason: "string (nếu cyclical: nêu vì sao + rủi ro bẫy P/E ở đỉnh chu kỳ)",
     eps_basis_note: "string (GAAP vs non-GAAP)",
-    forward_eps: hard._forwardFYs.map((fy) => ({ fy, value: "number|null", basis: "string", confidence: "low|med|high" })),
-    forward_revenue: hard._forwardFYs.slice(0, 2).map((fy) => ({ fy, value: "number USD|null", basis: "string" })),
     fcf: { value: "number USD|null", negative: "boolean", note: "string" },
     growth_runway: { drivers: [{ text: "string" }], backlog_rpo: { text: "string" }, tam: { text: "string" }, segments: [{ text: "string" }], risks: ["string"] },
     loss_to_profit_note: "string (nếu EPS nền âm/gần 0 thì cảnh báo méo tăng trưởng)",
   };
-  const usr = `MÃ: ${hard.ticker} (${h.company}, ngành ${h.sector}). Giá hiện tại: $${h.price.value}. ` +
-    `EPS quá khứ (GAAP, Finnhub): ${epsHist}. EPS TTM: ${h.eps_ttm?.value ?? "?"}. vendor pegTTM: ${h.peg_ttm_vendor?.value ?? "?"} (chỉ tham khảo, không dùng). ` +
-    `Hãy điền các năm tài chính forward: ${hard._forwardFYs.join(", ")}.\n` +
-    `Trả về DUY NHẤT JSON theo schema sau (đúng khóa, value là số hoặc null):\n${JSON.stringify(schema)}`;
+  const usr = `MÃ: ${hard.ticker} (${h.company}, ngành ${h.sector}). Giá: $${h.price.value}. EPS quá khứ (GAAP): ${epsHist}. ` +
+    `Chỉ trả phần ĐỊNH TÍNH theo schema (KHÔNG forward EPS):\n${JSON.stringify(schema)}`;
   return [{ role: "system", content: sys }, { role: "user", content: usr }];
 }
 
 function extractJSON(s) {
-  if (!s) throw new Error("model trả rỗng");
-  let txt = s.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  if (!s) return {};
+  let txt = String(s).trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   const a = txt.indexOf("{"), b = txt.lastIndexOf("}");
-  if (a < 0 || b < 0) throw new Error("model không trả JSON: " + txt.slice(0, 160));
-  return JSON.parse(txt.slice(a, b + 1));
+  if (a < 0 || b < 0) return {};
+  try { return JSON.parse(txt.slice(a, b + 1)); } catch { return {}; }
 }
 
-// Ghép số cứng (Finnhub) + ước lượng model -> canonical đầy đủ.
-export function mergeModel(hard, modelRaw, modelId) {
-  const j = extractJSON(modelRaw);
+// Ghép: số cứng (Yahoo) + forward EPS NGƯỜI DÙNG nhập + định tính của model -> canonical.
+export function buildCanonical(hard, { forwardEPS = {}, qualRaw = null, modelId = null } = {}) {
   const h = hard.hard;
   const today = hard.as_of;
-  const mprov = (extra) => ({ source: `model:${modelId}`, url: null, as_of_date: today, tier: "model", ...extra });
+  const j = qualRaw ? extractJSON(qualRaw) : {};
 
-  const eps_forward = [];
-  const wantFYs = hard._forwardFYs;
-  const got = new Map((j.forward_eps || []).map((e) => [Number(e.fy), e]));
-  for (const fy of wantFYs) {
-    const e = got.get(fy);
-    if (e && typeof e.value === "number" && isFinite(e.value)) {
-      eps_forward.push(mprov({ fy, value: round(e.value, 4), field: "forward_eps_estimate", basis: String(e.basis || "ước lượng model"), confidence: e.confidence || "low" }));
-    } else {
-      eps_forward.push({ fy, value: "GAP", reason: `model ${modelId} không đủ tự tin cho FY${fy}`, tier: "gap" });
-    }
-  }
-  const revenue_forward = [];
-  for (const r of (j.forward_revenue || [])) {
-    if (typeof r.value === "number" && isFinite(r.value)) revenue_forward.push(mprov({ fy: Number(r.fy), value: Math.round(r.value), field: "forward_revenue_estimate", basis: String(r.basis || "ước lượng model") }));
-  }
+  // Forward EPS do người dùng nhập (tier:'user') — lấy từ TradingView.
+  const uprov = (extra) => ({ source: "Người dùng nhập (TradingView)", url: null, as_of_date: today, tier: "user", ...extra });
+  const eps_forward = hard._forwardFYs.map((fy) => {
+    const v = forwardEPS[fy] ?? forwardEPS[String(fy)];
+    return (typeof v === "number" && isFinite(v))
+      ? uprov({ fy, value: round(v, 4), field: "forward_eps_user", basis: "Người dùng nhập từ TradingView" })
+      : { fy, value: "GAP", reason: `Người dùng chưa nhập forward EPS FY${fy}`, tier: "gap" };
+  });
+
+  // FCF từ model (tier:model) hoặc GAP.
   let fcf;
   if (j.fcf && typeof j.fcf.value === "number" && isFinite(j.fcf.value)) {
-    fcf = mprov({ value: Math.round(j.fcf.value), field: "fcf_estimate", basis: String(j.fcf.note || "ước lượng model"), note: String(j.fcf.note || "") });
-  } else fcf = { value: "GAP", reason: "model không ước lượng FCF tuyệt đối", source: `model:${modelId}`, as_of_date: today, tier: "gap" };
+    fcf = { value: Math.round(j.fcf.value), source: `model:${modelId}`, url: null, as_of_date: today, tier: "model", field: "fcf_estimate", basis: String(j.fcf.note || "ước lượng model"), note: String(j.fcf.note || "") };
+  } else fcf = { value: "GAP", reason: "model không ước lượng FCF tuyệt đối", source: `model:${modelId || "?"}`, as_of_date: today, tier: "gap" };
 
   const gr = j.growth_runway || {};
-  const txtNode = (o) => o && (o.text || typeof o === "string") ? { text: typeof o === "string" ? o : o.text, source: `model:${modelId}` } : null;
+  const txtNode = (o) => (o && (o.text || typeof o === "string")) ? { text: typeof o === "string" ? o : o.text, source: `model:${modelId}` } : null;
   const growth_runway = {
     drivers: (gr.drivers || []).map(txtNode).filter(Boolean),
     backlog_rpo: txtNode(gr.backlog_rpo),
     tam: txtNode(gr.tam),
     segments: (gr.segments || []).map(txtNode).filter(Boolean),
-    risks: (gr.risks || []).map((r) => (typeof r === "string" ? r : r.text)).filter(Boolean),
+    risks: (gr.risks || []).map((r) => (typeof r === "string" ? r : r && r.text)).filter(Boolean),
   };
-  if (!growth_runway.risks.length) growth_runway.risks = ["(model không nêu rủi ro cụ thể — cần bổ sung)"];
+  if (!growth_runway.risks.length) growth_runway.risks = ["(model không nêu rủi ro cụ thể — cần bổ sung thủ công)"];
 
   return {
-    ticker: hard.ticker,
-    as_of: today,
+    ticker: hard.ticker, as_of: today,
     meta: {
-      company: j.company || h.company,
-      sector: j.sector || h.sector,
-      fiscal_year_end_month: Number(j.fiscal_year_end_month) || h.fyeMonth,
-      currency: "USD",
-      cyclical: !!j.cyclical,
-      cyclical_reason: j.cyclical_reason || "",
-      eps_basis_note: j.eps_basis_note || "EPS quá khứ GAAP (Finnhub); forward do model ước lượng.",
-      model: modelId,
-      data_provenance: "hard=Finnhub; forward+qualitative=model(tier:model)",
+      company: j.company || h.company, sector: j.sector || h.sector,
+      fiscal_year_end_month: Number(j.fiscal_year_end_month) || h.fyeMonth, currency: "USD",
+      cyclical: !!j.cyclical, cyclical_reason: j.cyclical_reason || "",
+      eps_basis_note: j.eps_basis_note || "EPS quá khứ GAAP (Yahoo); forward EPS do người dùng nhập từ TradingView.",
+      model: modelId, data_provenance: "hard=Yahoo; forward EPS=user(TradingView); định tính=model",
     },
     price: h.price,
-    eps_ttm: h.eps_ttm || { value: "GAP", reason: "Finnhub thiếu epsTTM", tier: "gap" },
-    peg_ttm_vendor: h.peg_ttm_vendor || { value: "GAP", reason: "Finnhub thiếu pegTTM", tier: "gap" },
-    pe_ttm_vendor: h.pe_ttm_vendor || { value: "GAP", reason: "Finnhub thiếu peTTM", tier: "gap" },
+    eps_ttm: h.eps_ttm || { value: "GAP", reason: "thiếu epsTTM", tier: "gap" },
+    peg_ttm_vendor: h.peg_ttm_vendor || { value: "GAP", reason: "thiếu pegTTM", tier: "gap" },
+    pe_ttm_vendor: h.pe_ttm_vendor || { value: "GAP", reason: "thiếu peTTM", tier: "gap" },
     eps_actual: h.eps_actual,
     eps_forward,
-    revenue_forward,
+    revenue_forward: [],
     fcf,
     fundamentals_aux: h.beta ? { beta: h.beta } : {},
     growth_runway,
     gaps: [
-      "Forward EPS & định tính do MODEL ước lượng (tier:model) — KHÔNG phải consensus vendor; cần kiểm chứng.",
+      "Forward EPS do NGƯỜI DÙNG nhập (từ TradingView) — không phải consensus tự động; tin cậy theo nguồn người dùng.",
+      "Phần định tính (TAM, FCF, cyclical) do model sinh (tier:model) — cần kiểm chứng.",
       j.loss_to_profit_note ? `Lưu ý nền lợi nhuận: ${j.loss_to_profit_note}` : null,
     ].filter(Boolean),
   };

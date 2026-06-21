@@ -38,13 +38,13 @@ export function nodeProvenanceStatus(node) {
     return { ok: true, gap: true };
   }
   if (typeof node !== "object") return { ok: false, reason: "không phải object có provenance (số trần)" };
-  if (node.tier === "model") {
-    // Ước lượng của LLM: nguồn = model id, không có url, nhưng phải khai 'basis' (lý do/cơ sở).
+  if (node.tier === "model" || node.tier === "user") {
+    // Ước lượng model HOẶC số người dùng nhập: nguồn bắt buộc, url có thể null.
     const need = ["value", "source", "as_of_date", "field"].filter((f) => node[f] === undefined || node[f] === null || node[f] === "");
-    if (need.length) return { ok: false, reason: `model-node thiếu: ${need.join(", ")}` };
-    if (!node.basis) return { ok: false, reason: "model-node thiếu 'basis'" };
-    if (typeof node.value !== "number") return { ok: false, reason: "model value không phải số" };
-    return { ok: true, gap: false, model: true };
+    if (need.length) return { ok: false, reason: `${node.tier}-node thiếu: ${need.join(", ")}` };
+    if (node.tier === "model" && !node.basis) return { ok: false, reason: "model-node thiếu 'basis'" };
+    if (typeof node.value !== "number") return { ok: false, reason: `${node.tier} value không phải số` };
+    return { ok: true, gap: false, model: node.tier === "model", user: node.tier === "user" };
   }
   const missing = PROV_FIELDS.filter((f) => node[f] === undefined || node[f] === null || node[f] === "");
   if (missing.length) return { ok: false, reason: `thiếu trường: ${missing.join(", ")}` };

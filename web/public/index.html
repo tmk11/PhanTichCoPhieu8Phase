@@ -17,17 +17,23 @@
 
 <main class="wrap">
   <section id="runner" class="card">
-    <h2>🆕 Chạy mã mới (đa model song song)</h2>
-    <p class="hint">Số cứng (giá, EPS quá khứ, pegTTM) lấy từ Finnhub. <b>Forward EPS &amp; định tính do model ước lượng (tier:model)</b> — chọn nhiều model để so sánh độ phân tán. Đây KHÔNG phải consensus vendor.</p>
+    <h2>🆕 Chạy mã mới (forward EPS bạn tự nhập)</h2>
+    <p class="hint">Số cứng (giá, EPS quá khứ) lấy từ Yahoo. <b>Forward EPS do BẠN nhập</b> (lấy từ TradingView) ⇒ PEG có nguồn, giống nhau ở mọi model. Model chỉ làm phần định tính (TAM, chu kỳ, FCF).</p>
     <div class="runbar">
       <input id="new-ticker" placeholder="Mã, vd TSLA" maxlength="7" autocomplete="off" />
-      <button id="btn-run" class="primary">▶ Chạy 8 phase</button>
+      <button id="btn-load" class="primary">① Lấy dữ liệu</button>
       <button id="btn-toggle-models" class="ghost">Chọn model ▾</button>
       <span id="run-status" class="status"></span>
     </div>
     <div id="model-pick" hidden>
       <div class="pick-tools"><a id="pick-good" href="#">chọn nhóm tốt</a> · <a id="pick-none" href="#">bỏ chọn</a> <span id="pick-count" class="hint"></span></div>
       <div id="model-list" class="model-list"></div>
+    </div>
+    <div id="eps-form" hidden>
+      <div id="hard-info" class="run-head"></div>
+      <div class="hint">Nhập forward EPS (USD) từ TradingView cho từng năm — bỏ trống năm nào thì năm đó = GAP:</div>
+      <div id="eps-inputs" class="eps-inputs"></div>
+      <button id="btn-run" class="primary">② Chạy 8 phase</button>
     </div>
     <div id="run-results"></div>
   </section>

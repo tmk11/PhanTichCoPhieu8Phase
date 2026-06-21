@@ -9,8 +9,9 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { fetchHard, fetchHardYahoo, researchMessages, mergeModel } from "../scripts/research.mjs";
+import { fetchHard, fetchHardYahoo, qualMessages, buildCanonical } from "../scripts/research.mjs";
 import { analyze } from "../scripts/engine.mjs";
+import { computeDerived } from "../scripts/lib.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -156,13 +157,13 @@ function buildMessages(mode, ticker, question, reportText, spec) {
   ];
 }
 
-// Chạy 8-phase on-demand cho 1 (mã, model): research model -> ghép Finnhub -> derive/build/verify.
-async function runOneModel(hard, model, max_tokens = 1700) {
-  const raw = await routerChat({ model, messages: researchMessages(hard), temperature: 0.2, max_tokens });
-  const canon = mergeModel(hard, raw, model);
+// Chạy 8-phase cho 1 (mã, model): forward EPS = NGƯỜI DÙNG nhập; model chỉ làm định tính.
+async function runOneModel(hard, model, forwardEPS, max_tokens = 1500) {
+  const raw = await routerChat({ model, messages: qualMessages(hard), temperature: 0.3, max_tokens });
+  const canon = buildCanonical(hard, { forwardEPS, qualRaw: raw, modelId: model });
   const a = analyze(canon, RUBRIC);
   return {
-    model, verdict: a.verdict, model_sourced: a.model_sourced,
+    model, verdict: a.verdict, forward_source: a.forward_source,
     forwardPE: a.forwardPE, fy: a.fy, cagr_pct: a.cagr_pct, forwardPEG: a.forwardPEG,
     vendor_pegTTM: a.vendor_pegTTM, flags: a.flags,
     checks: a.checks.map((c) => ({ id: c.id, status: c.status, critical: c.critical })),
@@ -170,7 +171,22 @@ async function runOneModel(hard, model, max_tokens = 1700) {
   };
 }
 
+// Phần định lượng KHÔNG phụ thuộc model (từ giá Yahoo + forward EPS người dùng).
+function quantOnly(hard, forwardEPS) {
+  const canon = buildCanonical(hard, { forwardEPS, qualRaw: null, modelId: null });
+  const d = computeDerived(canon);
+  return { forwardPE: d.headline.forwardPE, fy: d.headline.fy, cagr_pct: d.growth.cagr_pct, forwardPEG: d.pegForward?.value ?? null, vendor_pegTTM: d.peg_vendor_for_compare, flags: d.flags };
+}
+
 const TICKER_RE = /^[A-Z][A-Z.\-]{0,6}$/;
+function parseForwardEPS(obj) {
+  const m = {};
+  for (const [k, v] of Object.entries(obj || {})) {
+    const fy = parseInt(k, 10); const num = typeof v === "number" ? v : parseFloat(v);
+    if (fy && isFinite(num)) m[fy] = num;
+  }
+  return m;
+}
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -201,10 +217,26 @@ const server = http.createServer(async (req, res) => {
       const content = await routerChat({ model, messages, temperature: body.temperature ?? 0.3 });
       return sendJSON(res, 200, { model, ms: Date.now() - t0, content });
     }
+    if (p === "/api/hard" && req.method === "POST") {
+      const body = JSON.parse((await readBody(req)) || "{}");
+      const ticker = String(body.ticker || "").toUpperCase().trim();
+      if (!TICKER_RE.test(ticker)) return sendJSON(res, 400, { error: "Mã không hợp lệ" });
+      let hard;
+      try { hard = await fetchHardData(ticker); }
+      catch (e) { return sendJSON(res, 400, { error: `RESEARCH (${DATA_SOURCE}) lỗi: ` + String(e.message || e) }); }
+      return sendJSON(res, 200, {
+        ticker, company: hard.hard.company, sector: hard.hard.sector, price: hard.hard.price.value,
+        as_of: hard.as_of, forwardFYs: hard._forwardFYs,
+        eps_actual: hard.hard.eps_actual.map((e) => ({ fy: e.fy, value: e.value })),
+        vendor_pegTTM: hard.hard.peg_ttm_vendor?.value ?? null, eps_ttm: hard.hard.eps_ttm?.value ?? null,
+      });
+    }
     if (p === "/api/run" && req.method === "POST") {
       const body = JSON.parse((await readBody(req)) || "{}");
       const ticker = String(body.ticker || "").toUpperCase().trim();
       if (!TICKER_RE.test(ticker)) return sendJSON(res, 400, { error: "Mã không hợp lệ (chữ in hoa, tối đa 7 ký tự)" });
+      const forwardEPS = parseForwardEPS(body.forwardEPS);
+      if (!Object.keys(forwardEPS).length) return sendJSON(res, 400, { error: "Hãy nhập forward EPS ít nhất 1 năm (lấy từ TradingView)" });
       let models = Array.isArray(body.models) ? body.models.filter(Boolean) : [];
       if (!models.length) models = [DEFAULT_MODEL];
       models = [...new Set(models)].slice(0, MAX_MODELS);
@@ -214,12 +246,13 @@ const server = http.createServer(async (req, res) => {
       catch (e) { return sendJSON(res, 400, { error: `RESEARCH (${DATA_SOURCE}) lỗi: ` + String(e.message || e) }); }
 
       const t0 = Date.now();
-      // CHẠY SONG SONG các model
+      const quant = quantOnly(hard, forwardEPS); // PEG model-independent (giá Yahoo + EPS người dùng)
       const results = await Promise.all(models.map((m) =>
-        runOneModel(hard, m).catch((e) => ({ model: m, error: String(e && e.message ? e.message : e) }))));
+        runOneModel(hard, m, forwardEPS).catch((e) => ({ model: m, error: String(e && e.message ? e.message : e) }))));
       return sendJSON(res, 200, {
         ticker, company: hard.hard.company, sector: hard.hard.sector,
         price: hard.hard.price.value, as_of: hard.as_of, forwardFYs: hard._forwardFYs,
+        forwardEPS, quant,
         eps_actual: hard.hard.eps_actual.map((e) => ({ fy: e.fy, value: e.value })),
         vendor_pegTTM: hard.hard.peg_ttm_vendor?.value ?? null,
         ms: Date.now() - t0, results,

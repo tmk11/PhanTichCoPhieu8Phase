@@ -143,18 +143,47 @@ async function loadModelChecklist() {
 function pickedModels() { return [...document.querySelectorAll("#model-list input:checked")].map((i) => i.value); }
 function updatePickCount() { $("#pick-count").textContent = `(${pickedModels().length} model đã chọn, tối đa 6)`; }
 
-async function runNew() {
+let HARD = null;
+async function loadHard() {
   const ticker = $("#new-ticker").value.toUpperCase().trim();
   if (!/^[A-Z][A-Z.\-]{0,6}$/.test(ticker)) { $("#run-status").textContent = "Mã không hợp lệ"; return; }
+  $("#btn-load").disabled = true; $("#run-status").textContent = `Đang lấy số cứng ${ticker} (Yahoo)…`;
+  $("#eps-form").hidden = true; $("#run-results").innerHTML = "";
+  try {
+    const d = await fetch("/api/hard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker }) }).then((r) => r.json());
+    if (d.error) throw new Error(d.error);
+    HARD = d;
+    const epsHist = (d.eps_actual || []).map((e) => `FY${e.fy}=${e.value}`).join(", ");
+    $("#hard-info").innerHTML = `<b>${d.ticker}</b> — ${d.company} · ${d.sector} · giá <b>$${d.price}</b> · EPS quá khứ: ${epsHist} · vendor pegTTM ${fmt(d.vendor_pegTTM)} <span class="hint">(Yahoo)</span>`;
+    $("#eps-inputs").innerHTML = d.forwardFYs.map((fy) =>
+      `<label>FY${fy} EPS<input type="number" step="any" inputmode="decimal" data-fy="${fy}" placeholder="vd 8.75"/></label>`).join("");
+    $("#eps-form").hidden = false;
+    $("#run-status").textContent = `Đã lấy dữ liệu — nhập forward EPS từ TradingView rồi bấm ② Chạy.`;
+    $("#eps-inputs input")?.focus?.();
+  } catch (e) { $("#run-status").textContent = "Lỗi: " + (e.message || e); }
+  finally { $("#btn-load").disabled = false; }
+}
+
+function collectEPS() {
+  const m = {};
+  document.querySelectorAll("#eps-inputs input").forEach((i) => { const v = parseFloat(i.value); if (isFinite(v)) m[i.dataset.fy] = v; });
+  return m;
+}
+
+async function runNew() {
+  if (!HARD) { $("#run-status").textContent = "Bấm ① Lấy dữ liệu trước"; return; }
+  const ticker = HARD.ticker;
+  const forwardEPS = collectEPS();
+  if (!Object.keys(forwardEPS).length) { $("#run-status").textContent = "Hãy nhập forward EPS ít nhất 1 năm"; return; }
   let models = pickedModels();
-  if (!models.length) { $("#model-pick").hidden = false; $("#run-status").textContent = "Hãy chọn ít nhất 1 model"; return; }
-  if (models.length > 6) { $("#run-status").textContent = "Tối đa 6 model"; return; }
+  if (!models.length) { $("#model-pick").hidden = false; $("#run-status").textContent = "Hãy chọn ít nhất 1 model (cho phần định tính)"; return; }
+  models = models.slice(0, 6);
   $("#btn-run").disabled = true;
-  $("#run-status").textContent = `Đang chạy ${ticker} trên ${models.length} model (song song)…`;
+  $("#run-status").textContent = `Đang chạy ${ticker} · ${models.length} model (định tính song song)…`;
   $("#run-results").innerHTML = "";
   try {
     const t0 = Date.now();
-    const d = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker, models }) }).then((r) => r.json());
+    const d = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker, forwardEPS, models }) }).then((r) => r.json());
     if (d.error) throw new Error(d.error);
     $("#run-status").textContent = `${ticker} · ${((Date.now() - t0) / 1000).toFixed(1)}s · ${d.results.length} model`;
     renderRun(d);
@@ -163,12 +192,17 @@ async function runNew() {
 }
 
 function renderRun(d) {
-  const ok = d.results.filter((r) => !r.error && r.forwardPEG != null);
-  const pegs = ok.map((r) => r.forwardPEG);
-  const disp = pegs.length > 1 ? `Độ phân tán forward PEG giữa model: ${Math.min(...pegs).toFixed(2)} – ${Math.max(...pegs).toFixed(2)} (chênh ${(Math.max(...pegs) - Math.min(...pegs)).toFixed(2)})` : "";
-  const epsHist = (d.eps_actual || []).map((e) => `FY${e.fy}=${e.value}`).join(", ");
-  let html = `<div class="run-head"><b>${d.ticker}</b> — ${d.company} · ngành ${d.sector} · giá $${d.price} · EPS quá khứ: ${epsHist} · vendor pegTTM ${fmt(d.vendor_pegTTM)} · forward FY ${d.forwardFYs.join("/")} <span class="hint">(số cứng: Finnhub)</span></div>`;
-  if (disp) html += `<div class="disp">⚖️ ${disp} — phân tán lớn = bất định cao.</div>`;
+  const q = d.quant || {};
+  const epsUsed = Object.entries(d.forwardEPS || {}).map(([fy, v]) => `FY${fy}=${v}`).join(", ");
+  const pegCls = q.forwardPEG != null ? (q.forwardPEG < 1 ? "cheap" : "rich") : "";
+  let html = `<div class="run-head"><b>${d.ticker}</b> — ${d.company} · ${d.sector} · giá $${d.price} · forward EPS bạn nhập: <b>${epsUsed || "—"}</b></div>`;
+  html += `<div class="quant-kpis">
+    <div>forward P/E (FY${q.fy})<b>${fmt(q.forwardPE)}</b></div>
+    <div>CAGR EPS<b>${q.cagr_pct != null ? fmt(q.cagr_pct) + "%" : "—"}</b></div>
+    <div>forward PEG<b class="${pegCls}">${fmt(q.forwardPEG)}</b></div>
+    <div>vendor pegTTM<b>${fmt(q.vendor_pegTTM)}</b></div>
+  </div>`;
+  html += `<div class="disp">✅ PEG tính từ giá Yahoo + forward EPS bạn nhập ⇒ <b>giống nhau ở mọi model</b> (hết phân tán). Bên dưới: phần ĐỊNH TÍNH mỗi model khác nhau.</div>`;
   html += `<div class="cmp">` + d.results.map(mcard).join("") + `</div>`;
   $("#run-results").innerHTML = html;
 }
@@ -192,9 +226,10 @@ function mcard(r) {
   </div>`;
 }
 
+$("#btn-load").onclick = loadHard;
 $("#btn-run").onclick = runNew;
 $("#btn-toggle-models").onclick = () => { const e = $("#model-pick"); e.hidden = !e.hidden; };
-$("#new-ticker").addEventListener("keydown", (e) => { if (e.key === "Enter") runNew(); });
+$("#new-ticker").addEventListener("keydown", (e) => { if (e.key === "Enter") loadHard(); });
 $("#pick-good").onclick = (e) => { e.preventDefault(); document.querySelectorAll("#model-list input").forEach((i) => (i.checked = GOOD_RE.test(i.value))); updatePickCount(); };
 $("#pick-none").onclick = (e) => { e.preventDefault(); document.querySelectorAll("#model-list input").forEach((i) => (i.checked = false)); updatePickCount(); };
 

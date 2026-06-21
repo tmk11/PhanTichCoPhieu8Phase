@@ -9,15 +9,25 @@ export function hasModelTier(c) {
   return (c.eps_forward || []).some((e) => e.tier === "model") ||
     (c.revenue_forward || []).some((e) => e.tier === "model");
 }
+export function forwardSource(c) {
+  const fwd = (c.eps_forward || []).filter((e) => typeof e.value === "number");
+  if (fwd.some((e) => e.tier === "user")) return "user";
+  if (fwd.some((e) => e.tier === "model")) return "model";
+  return fwd[0]?.tier || "vendor";
+}
 
 // ---- Phase 4 BUILD (thuần): trả về markdown ----
 export function renderReport(c, d) {
   const gr = c.growth_runway || {};
   const peg = d.pegForward;
   const cheap = peg ? (peg.value < 1 ? "tương đối RẺ so với tăng trưởng" : "KHÔNG rẻ theo tăng trưởng") : "không xác định";
-  const modelSourced = hasModelTier(c);
+  const fsrc = forwardSource(c);
+  const modelSourced = fsrc === "model";
+  const userSourced = fsrc === "user";
 
-  const biggestCaveat = modelSourced
+  const biggestCaveat = userSourced
+    ? "forward EPS do NGƯỜI DÙNG nhập (từ TradingView) — kiểm tra lại số đã nhập"
+    : modelSourced
     ? "forward EPS do MODEL ước lượng (không phải consensus vendor) — độ tin cậy thấp"
     : d.flags.cyclical ? "đây là cổ phiếu CHU KỲ — P/E thấp ở đỉnh chu kỳ có thể là BẪY"
     : d.flags.peg_unreliable_low_growth ? "tăng trưởng EPS đồng thuận gần hạn ~đi ngang ⇒ PEG ngắn hạn bị méo"
@@ -29,9 +39,12 @@ export function renderReport(c, d) {
   M.push(`*as_of: ${c.as_of} · giá tham chiếu: $${c.price.value} (${c.price.source}, ${c.price.as_of_date})*`);
   M.push(``);
   M.push(`> ⚠️ **Đây là tài liệu THAM KHẢO, KHÔNG phải lời khuyên đầu tư.**`);
-  if (modelSourced) {
+  if (userSourced) {
     M.push(`>`);
-    M.push(`> 🤖 **CẢNH BÁO NGUỒN:** Số cứng (giá, EPS quá khứ, pegTTM) lấy từ Finnhub. **Forward EPS & phần định tính do MODEL \`${c.meta.model || "?"}\` ƯỚC LƯỢNG (tier: model), KHÔNG phải consensus analyst.** Hãy đối chiếu nhiều model để thấy độ phân tán; tự kiểm chứng trước khi dùng.`);
+    M.push(`> ✍️ **NGUỒN:** Số cứng (giá, EPS quá khứ) từ Yahoo Finance. **Forward EPS do NGƯỜI DÙNG nhập (từ TradingView)** ⇒ forward P/E & PEG dựa trên số bạn nhập. Phần định tính (TAM, FCF, chu kỳ) do model \`${c.meta.model || "?"}\` sinh — cần kiểm chứng.`);
+  } else if (modelSourced) {
+    M.push(`>`);
+    M.push(`> 🤖 **CẢNH BÁO NGUỒN:** Số cứng từ Yahoo/Finnhub. **Forward EPS & định tính do MODEL \`${c.meta.model || "?"}\` ƯỚC LƯỢNG (tier: model), KHÔNG phải consensus analyst.** Đối chiếu nhiều model để thấy độ phân tán.`);
   }
   M.push(``);
 
@@ -54,7 +67,8 @@ export function renderReport(c, d) {
   M.push(``);
 
   M.push(`## 3. Caveat (đọc kỹ trước khi dùng số)`);
-  if (modelSourced) M.push(`- 🤖 **MODEL-SOURCED:** forward EPS là ước lượng của model, không có URL nguồn — chỉ nên đọc định tính & so sánh giữa các model.`);
+  if (userSourced) M.push(`- ✍️ **USER-SOURCED:** forward EPS do bạn nhập (TradingView) — PEG chỉ đúng khi số nhập đúng; phần định tính bên dưới do model sinh.`);
+  else if (modelSourced) M.push(`- 🤖 **MODEL-SOURCED:** forward EPS là ước lượng của model, không có URL nguồn — chỉ nên đọc định tính & so sánh giữa các model.`);
   if (d.flags.cyclical) M.push(`- 🔴 **CHU KỲ (cyclical):** ${c.meta.cyclical_reason || "ngành có tính chu kỳ"}. **P/E thấp ở ĐỈNH chu kỳ lợi nhuận thường là BẪY.**`);
   if (d.flags.loss_to_profit_applicable) M.push(`- 🟠 **Nền lỗ / lãi-gần-0 (loss-to-profit / low-base):** ${d.flags.loss_to_profit_reason} Tăng trưởng quá khứ **bị thổi phồng**, không nên dùng làm PEG tiêu đề.`);
   if (d.flags.peg_unreliable_low_growth) M.push(`- 🟠 **PEG ngắn hạn không đáng tin:** CAGR forward chỉ ${pct(d.growth.cagr_pct)} (gần 0) ⇒ phép chia PEG phóng đại.`);
@@ -111,7 +125,7 @@ export function runChecks({ canonical: c, declared, report, rubric }) {
   const provBad = prov.filter((r) => !r.ok);
   const headlineInputsOk = prov.find((r) => r.path === "price")?.ok &&
     (c.eps_forward || []).filter((e) => typeof e.value === "number").every((e) =>
-      e.tier === "model" ? (e.source && e.as_of_date && e.field && e.basis)
+      (e.tier === "model" || e.tier === "user") ? (e.source && e.as_of_date && e.field)
         : ["value", "source", "url", "as_of_date", "field"].every((f) => e[f] !== undefined && e[f] !== null && e[f] !== ""));
   add("G4_cite_or_gap", true, provBad.length === 0 && headlineInputsOk ? "pass" : "fail",
     provBad.length ? `Node lỗi: ${provBad.map((b) => `${b.path}(${b.reason})`).join("; ")}` : headlineInputsOk ? "Mọi node có provenance/GAP/model-basis." : "Input tiêu đề thiếu provenance.");
@@ -180,6 +194,6 @@ export function analyze(canonical, rubric) {
     forwardPE: derived.headline.forwardPE, fy: derived.headline.fy,
     cagr_pct: derived.growth.cagr_pct, forwardPEG: derived.pegForward?.value ?? null,
     vendor_pegTTM: derived.peg_vendor_for_compare, flags: derived.flags,
-    model_sourced: hasModelTier(canonical), report, derived,
+    model_sourced: hasModelTier(canonical), forward_source: forwardSource(canonical), report, derived,
   };
 }
