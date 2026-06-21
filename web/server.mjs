@@ -340,6 +340,28 @@ const server = http.createServer(async (req, res) => {
       });
     }
     if (p === "/api/history") return sendJSON(res, 200, { jobs: listJobs() });
+    if (p === "/api/compare") {
+      const compareRow = (j) => {
+        const q = j.quant || {};
+        const lmap = {};
+        (q.lenses || []).forEach((l) => { lmap[l.id] = { value: l.value, unit: l.unit, verdict: l.verdict, label: l.label, text: l.text }; });
+        return {
+          id: j.id, ticker: j.ticker, company: j.company, price: j.price, ts: j.ts, sector: j.sector,
+          forwardPE: q.forwardPE ?? null, cagr_pct: q.cagr_pct ?? null, forwardPEG: q.forwardPEG ?? null,
+          vendor_pegTTM: q.vendor_pegTTM ?? j.vendor_pegTTM ?? null, lenses: lmap,
+          writerVerdict: j.writer?.verdict ?? null, forwardEPS: j.forwardEPS || {},
+        };
+      };
+      let rows = [];
+      const ids = (url.searchParams.get("ids") || "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 8);
+      if (ids.length) rows = ids.map(getJob).filter(Boolean).map(compareRow);
+      else {
+        const tks = (url.searchParams.get("tickers") || "").split(",").map((s) => s.trim().toUpperCase()).filter(Boolean).slice(0, 8);
+        const all = listJobs(500);
+        for (const t of tks) { const s = all.find((x) => x.ticker === t); const j = s && getJob(s.id); if (j) rows.push(compareRow(j)); }
+      }
+      return sendJSON(res, 200, { rows });
+    }
     if (p.startsWith("/api/job/")) {
       const j = getJob(decodeURIComponent(p.slice("/api/job/".length)));
       return j ? sendJSON(res, 200, jobPublic(j)) : sendJSON(res, 404, { error: "job không tồn tại" });

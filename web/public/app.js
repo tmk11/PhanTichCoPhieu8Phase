@@ -307,7 +307,60 @@ async function loadHistory() {
       return `<div class="hist-row" data-id="${j.id}"><span class="tk">${j.ticker}</span> <span>PEG ${fmt(j.forwardPEG)}</span> <span class="hint">${st} ${j.iterations || 0} vòng · ${t}</span></div>`;
     }).join("");
     document.querySelectorAll(".hist-row").forEach((el) => { el.onclick = () => openJob(el.dataset.id); });
+    renderComparePicker(list);
   } catch { /* bỏ qua */ }
+}
+
+const LS_WATCH = "sp_watch";
+function renderComparePicker(list) {
+  // lấy job MỚI NHẤT mỗi ticker
+  const latest = {};
+  for (const j of list) { if (!latest[j.ticker]) latest[j.ticker] = j; }
+  const tickers = Object.values(latest);
+  if (!tickers.length) return;
+  $("#compare-sec").hidden = false;
+  const watch = new Set(JSON.parse(localStorage.getItem(LS_WATCH) || "[]"));
+  $("#compare-pick").innerHTML = tickers.map((j) =>
+    `<label class="cmp-chip"><input type="checkbox" value="${j.id}" data-tk="${j.ticker}" ${watch.has(j.ticker) ? "checked" : ""}/> ${j.ticker} <span class="hint">PEG ${fmt(j.forwardPEG)}</span></label>`).join("");
+}
+
+async function doCompare() {
+  const checked = [...document.querySelectorAll("#compare-pick input:checked")];
+  const ids = checked.map((i) => i.value).slice(0, 8);
+  localStorage.setItem(LS_WATCH, JSON.stringify(checked.map((i) => i.dataset.tk)));
+  if (ids.length < 2) { $("#compare-out").innerHTML = "<p class='hint'>Chọn ít nhất 2 mã để so sánh.</p>"; return; }
+  $("#compare-out").innerHTML = "<p class='hint'>đang tải…</p>";
+  try {
+    const d = await fetch("/api/compare?ids=" + encodeURIComponent(ids.join(","))).then((r) => r.json());
+    renderCompare(d.rows || []);
+  } catch (e) { $("#compare-out").innerHTML = "<p class='hint'>Lỗi: " + (e.message || e) + "</p>"; }
+}
+
+function renderCompare(rows) {
+  if (rows.length < 2) { $("#compare-out").innerHTML = "<p class='hint'>Không đủ dữ liệu.</p>"; return; }
+  const lc = (r, id) => { const l = (r.lenses || {})[id]; return l ? { v: (l.value != null ? l.value + (l.unit || "") : "GAP"), cls: l.verdict } : { v: "—", cls: "" }; };
+  const pegCell = (v) => v == null ? "—" : `<span class="${v < 1 ? "cheap" : "rich"}">${fmt(v)}</span>`;
+  // best PEG (thấp nhất) tô đậm
+  const minPeg = Math.min(...rows.filter((r) => r.forwardPEG != null).map((r) => r.forwardPEG));
+  const metricRows = [
+    ["Giá", (r) => "$" + r.price],
+    ["forward P/E", (r) => fmt(r.forwardPE)],
+    ["CAGR EPS", (r) => r.cagr_pct != null ? fmt(r.cagr_pct) + "%" : "—"],
+    ["forward PEG", (r) => `${r.forwardPEG === minPeg ? "⭐ " : ""}${pegCell(r.forwardPEG)}`],
+    ["vendor pegTTM", (r) => fmt(r.vendor_pegTTM)],
+    ["🟢/🟠 FCF yield", (r) => { const c = lc(r, "fcf_yield"); return `<span class="lc ${c.cls}">${c.v}</span>`; }],
+    ["CapEx / D&A", (r) => { const c = lc(r, "capex_dna"); return `<span class="lc ${c.cls}">${c.v}</span>`; }],
+    ["EV / EBITDA", (r) => { const c = lc(r, "ev_ebitda"); return `<span class="lc ${c.cls}">${c.v}</span>`; }],
+    ["Reverse-DCF (g ngầm)", (r) => { const c = lc(r, "reverse_dcf"); return `<span class="lc ${c.cls}">${c.v}</span>`; }],
+    ["Rule of 40", (r) => { const c = lc(r, "rule40"); return `<span class="lc ${c.cls}">${c.v}</span>`; }],
+    ["Đánh giá writer", (r) => r.writerVerdict ? `<span class="badge ${r.writerVerdict}">${r.writerVerdict}</span>` : "—"],
+  ];
+  let html = `<table class="cmp-table"><thead><tr><th>Chỉ số</th>${rows.map((r) => `<th>${r.ticker}<div class="hint">${r.company ? r.company.slice(0, 18) : ""}</div></th>`).join("")}</tr></thead><tbody>`;
+  for (const [label, fn] of metricRows) {
+    html += `<tr><td class="mlabel">${label}</td>${rows.map((r) => `<td class="num">${fn(r)}</td>`).join("")}</tr>`;
+  }
+  html += `</tbody></table><div class="hint">⭐ = forward PEG thấp nhất. Màu ô lăng kính: 🟢 tốt · 🟠 lưu ý · 🔴 xấu · ⚪ trung tính/GAP. FCF âm chưa chắc xấu — xem cặp FCF↔OCF & CapEx/D&A.</div>`;
+  $("#compare-out").innerHTML = html;
 }
 
 async function openJob(id) {
@@ -359,6 +412,7 @@ function mcard(r) {
 
 $("#btn-load").onclick = loadHard;
 $("#btn-run").onclick = runNew;
+$("#btn-compare").onclick = doCompare;
 $("#btn-toggle-models").onclick = () => { const e = $("#model-pick"); e.hidden = !e.hidden; };
 $("#new-ticker").addEventListener("keydown", (e) => { if (e.key === "Enter") loadHard(); });
 $("#pick-good").onclick = (e) => { e.preventDefault(); document.querySelectorAll("#model-list input").forEach((i) => (i.checked = GOOD_RE.test(i.value))); updatePickCount(); };
