@@ -81,22 +81,40 @@ export async function fetchHardYahoo(ticker, { python, script, timeoutMs = 30000
   };
 }
 
-// Prompt cho model: CHỈ phần ĐỊNH TÍNH (forward EPS đã do người dùng nhập, không cần model đoán).
+const QUAL_SCHEMA = {
+  company: "string", sector: "string", fiscal_year_end_month: "1-12",
+  cyclical: "boolean", cyclical_reason: "string (nếu cyclical: nêu vì sao + rủi ro bẫy P/E ở đỉnh chu kỳ)",
+  eps_basis_note: "string (GAAP vs non-GAAP)",
+  fcf: { value: "number USD|null", negative: "boolean", note: "string" },
+  growth_runway: { drivers: [{ text: "string" }], backlog_rpo: { text: "string" }, tam: { text: "string" }, segments: [{ text: "string" }], risks: ["string"] },
+  loss_to_profit_note: "string (nếu EPS nền âm/gần 0 thì cảnh báo méo tăng trưởng)",
+};
+
+// Prompt cho WRITER: CHỈ phần ĐỊNH TÍNH (forward EPS đã do người dùng nhập, không cần model đoán).
 export function qualMessages(hard) {
   const h = hard.hard;
   const epsHist = h.eps_actual.map((e) => `FY${e.fy}=${e.value}`).join(", ");
   const sys = `Bạn là analyst cổ phiếu. Forward EPS ĐÃ do người dùng cung cấp (lấy từ TradingView) — bạn KHÔNG cần và KHÔNG được đoán forward EPS. ` +
     `Nhiệm vụ của bạn CHỈ là phần ĐỊNH TÍNH. Trả về DUY NHẤT JSON hợp lệ (không markdown, không văn xuôi ngoài JSON). Viết tiếng Việt.`;
-  const schema = {
-    company: "string", sector: "string", fiscal_year_end_month: "1-12",
-    cyclical: "boolean", cyclical_reason: "string (nếu cyclical: nêu vì sao + rủi ro bẫy P/E ở đỉnh chu kỳ)",
-    eps_basis_note: "string (GAAP vs non-GAAP)",
-    fcf: { value: "number USD|null", negative: "boolean", note: "string" },
-    growth_runway: { drivers: [{ text: "string" }], backlog_rpo: { text: "string" }, tam: { text: "string" }, segments: [{ text: "string" }], risks: ["string"] },
-    loss_to_profit_note: "string (nếu EPS nền âm/gần 0 thì cảnh báo méo tăng trưởng)",
-  };
   const usr = `MÃ: ${hard.ticker} (${h.company}, ngành ${h.sector}). Giá: $${h.price.value}. EPS quá khứ (GAAP): ${epsHist}. ` +
-    `Chỉ trả phần ĐỊNH TÍNH theo schema (KHÔNG forward EPS):\n${JSON.stringify(schema)}`;
+    `Chỉ trả phần ĐỊNH TÍNH theo schema (KHÔNG forward EPS):\n${JSON.stringify(QUAL_SCHEMA)}`;
+  return [{ role: "system", content: sys }, { role: "user", content: usr }];
+}
+
+// Prompt cho WRITER TỰ SỬA (refine) theo góp ý reviewer.
+export function reviseMessages(hard, prevQualRaw, findings) {
+  const h = hard.hard;
+  const epsHist = h.eps_actual.map((e) => `FY${e.fy}=${e.value}`).join(", ");
+  const prev = parseJSONLoose(prevQualRaw);
+  const flist = (findings || []).map((f, i) => `${i + 1}. [${f.severity || "med"}] ${f.issue}${f.by ? ` (reviewer ${f.by})` : ""}`).join("\n") || "(không có)";
+  const sys = `Bạn là analyst (WRITER). Đây là bản ĐỊNH TÍNH trước của bạn và GÓP Ý của reviewer độc lập. ` +
+    `Hãy SỬA để khắc phục TẤT CẢ góp ý: bổ sung caveat còn thiếu (chu kỳ & bẫy P/E đỉnh, nền lỗ→lãi, FCF âm, độ tin forward EPS), ` +
+    `bỏ khẳng định bịa/nói quá, làm rõ mâu thuẫn với số liệu. Chỉ trả về DUY NHẤT JSON ĐÚNG schema cũ (không markdown). ` +
+    `KHÔNG bịa số cứng/forward EPS. Viết tiếng Việt.`;
+  const usr = `MÃ ${hard.ticker} (${h.company}). EPS quá khứ: ${epsHist}.\n` +
+    `BẢN ĐỊNH TÍNH TRƯỚC (JSON):\n${JSON.stringify(prev)}\n\n` +
+    `GÓP Ý REVIEWER CẦN KHẮC PHỤC:\n${flist}\n\n` +
+    `Trả về JSON định tính ĐÃ SỬA theo đúng schema:\n${JSON.stringify(QUAL_SCHEMA)}`;
   return [{ role: "system", content: sys }, { role: "user", content: usr }];
 }
 

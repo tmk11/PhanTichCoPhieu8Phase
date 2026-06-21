@@ -209,15 +209,29 @@ function renderRun(d) {
     <div>forward PEG<b class="${pegCls}">${fmt(q.forwardPEG)}</b></div>
     <div>vendor pegTTM<b>${fmt(q.vendor_pegTTM)}</b></div>
   </div>`;
+  // Refine status
+  if (d.warning) {
+    html += `<div class="warn-box">⚠️ <b>Sau ${d.iterations}/${d.max_refine} vòng refine, reviewer VẪN còn phát hiện lỗi.</b> Báo cáo vẫn hiển thị bên dưới nhưng hãy ĐỌC THẬN TRỌNG — xem các lỗi còn lại ở phần reviewer.</div>`;
+  } else {
+    html += `<div class="ok-box">✅ Reviewer hết lỗi sau ${d.iterations} vòng refine (writer tự sửa theo góp ý).</div>`;
+  }
+  // refine timeline
+  if ((d.rounds || []).length) {
+    html += `<div class="rounds">` + d.rounds.map((rd) => {
+      const tot = rd.reviews.reduce((s, x) => s + (x.findings || 0), 0);
+      const ok = rd.reviews.every((x) => x.status === "pass");
+      return `<span class="round ${ok ? "ok" : "bad"}">vòng ${rd.iter}: ${ok ? "sạch" : tot + " lỗi"}</span>`;
+    }).join(" → ") + `</div>`;
+  }
   // Writer block
   const wguards = (w.checks || []).map((c) => `<span class="gpill ${c.status}" title="${c.id}">${c.id.split("_")[0]}</span>`).join("");
   html += `<div class="writer-block card">
-    <h4>✍️ Writer: ${w.writer || "?"} <span class="badge ${w.verdict}">${w.verdict || "—"}</span></h4>
+    <h4>✍️ Writer: ${w.writer || "?"} <span class="badge ${w.verdict}">${w.verdict || "—"}</span> ${w.refined ? `<span class="hint">(đã refine ${w.iterations} vòng)</span>` : ""}</h4>
     <div class="guards-mini">${wguards}</div>
-    <details open><summary>Báo cáo định tính (writer)</summary><div class="md">${md2html(w.report || "")}</div></details>
+    <details open><summary>Báo cáo định tính (bản cuối)</summary><div class="md">${md2html(w.report || "")}</div></details>
   </div>`;
-  // Reviewers
-  html += `<h3 style="margin:16px 0 4px">🔎 Reviewers soi lỗi (${(d.reviews || []).length}, chạy song song)</h3>`;
+  // Reviewers (vòng cuối)
+  html += `<h3 style="margin:16px 0 4px">🔎 Reviewers — vòng cuối (${(d.reviews || []).length}, song song)</h3>`;
   html += `<div class="review-grid">` + (d.reviews || []).map(rcard).join("") + `</div>`;
   $("#run-results").innerHTML = html;
 }
