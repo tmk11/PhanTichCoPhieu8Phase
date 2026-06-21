@@ -120,10 +120,38 @@ export function reviseMessages(hard, prevQualRaw, findings) {
 
 export function parseJSONLoose(s) {
   if (!s) return {};
-  let txt = String(s).trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
-  const a = txt.indexOf("{"), b = txt.lastIndexOf("}");
-  if (a < 0 || b < 0) return {};
-  try { return JSON.parse(txt.slice(a, b + 1)); } catch { return {}; }
+  let t = String(s).replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/```(?:json)?/gi, "").trim();
+  const i = t.indexOf("{");
+  if (i < 0) return {};
+  // Quét ngoặc cân bằng từ '{' đầu tiên (bỏ qua chuỗi/escape) -> lấy object hoàn chỉnh, chịu được prose thừa.
+  let depth = 0, inStr = false, esc = false, end = -1;
+  for (let k = i; k < t.length; k++) {
+    const ch = t[k];
+    if (inStr) { if (esc) esc = false; else if (ch === "\\") esc = true; else if (ch === '"') inStr = false; }
+    else if (ch === '"') inStr = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}") { depth--; if (depth === 0) { end = k; break; } }
+  }
+  const slice = end >= 0 ? t.slice(i, end + 1) : t.slice(i);
+  try { return JSON.parse(slice); } catch {}
+  // Bị cắt cụt: đóng nốt ngoặc còn thiếu (đúng loại { } / [ ]) rồi parse.
+  const stack = []; let str = false, e = false;
+  for (let k = 0; k < slice.length; k++) {
+    const ch = slice[k];
+    if (str) { if (e) e = false; else if (ch === "\\") e = true; else if (ch === '"') str = false; }
+    else if (ch === '"') str = true;
+    else if (ch === "{") stack.push("}");
+    else if (ch === "[") stack.push("]");
+    else if (ch === "}" || ch === "]") stack.pop();
+  }
+  let fix = slice.replace(/,\s*$/, "");
+  if (str) fix += '"';
+  while (stack.length) fix += stack.pop();
+  try { return JSON.parse(fix); } catch {}
+  // Phương án cuối: cắt tới '}' cuối cùng.
+  const last = slice.lastIndexOf("}");
+  if (last > 0) { try { return JSON.parse(slice.slice(0, last + 1)); } catch {} }
+  return {};
 }
 const extractJSON = parseJSONLoose;
 
@@ -169,13 +197,14 @@ export function buildCanonical(hard, { forwardEPS = {}, qualRaw = null, modelId 
   } else fcf = { value: "GAP", reason: "model không ước lượng FCF tuyệt đối", source: `model:${modelId || "?"}`, as_of_date: today, tier: "gap" };
 
   const gr = j.growth_runway || {};
+  const arr = (x) => (Array.isArray(x) ? x : x ? [x] : []);
   const txtNode = (o) => (o && (o.text || typeof o === "string")) ? { text: typeof o === "string" ? o : o.text, source: `model:${modelId}` } : null;
   const growth_runway = {
-    drivers: (gr.drivers || []).map(txtNode).filter(Boolean),
+    drivers: arr(gr.drivers).map(txtNode).filter(Boolean),
     backlog_rpo: txtNode(gr.backlog_rpo),
     tam: txtNode(gr.tam),
-    segments: (gr.segments || []).map(txtNode).filter(Boolean),
-    risks: (gr.risks || []).map((r) => (typeof r === "string" ? r : r && r.text)).filter(Boolean),
+    segments: arr(gr.segments).map(txtNode).filter(Boolean),
+    risks: arr(gr.risks).map((r) => (typeof r === "string" ? r : r && r.text)).filter(Boolean),
   };
   if (!growth_runway.risks.length) growth_runway.risks = ["(model không nêu rủi ro cụ thể — cần bổ sung thủ công)"];
 

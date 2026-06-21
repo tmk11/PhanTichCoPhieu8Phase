@@ -160,10 +160,12 @@ function buildMessages(mode, ticker, question, reportText, spec) {
 
 // WRITER viết/sửa phần định tính -> ghép forward EPS người dùng -> derive/build/verify.
 // messages = qualMessages (vòng đầu) hoặc reviseMessages (vòng refine). Trả {qualRaw, a}.
-async function writeQual(hard, model, forwardEPS, messages, max_tokens = 1600) {
+async function writeQual(hard, model, forwardEPS, messages, max_tokens = 2400) {
   const qualRaw = await routerChat({ model, messages, temperature: 0.3, max_tokens });
   const canon = buildCanonical(hard, { forwardEPS, qualRaw, modelId: model });
-  return { qualRaw, a: analyze(canon, RUBRIC) };
+  const gr = canon.growth_runway || {};
+  const growthOk = (gr.drivers || []).length > 0 || !!gr.tam || (gr.segments || []).length > 0;
+  return { qualRaw, a: analyze(canon, RUBRIC), growthOk };
 }
 function writerView(model, a, iterations, refined) {
   return {
@@ -239,7 +241,7 @@ async function runJob(job, hard, forwardEPS) {
   try {
     const epsHist = hard.hard.eps_actual.map((e) => `FY${e.fy}=${e.value}`).join(", ");
     const ctxBase = { ticker: job.ticker, company: job.company, price: job.price, epsHist, forwardEPS, quant: { forwardPE: job.quant.forwardPE, cagr_pct: job.quant.cagr_pct, forwardPEG: job.quant.forwardPEG } };
-    let { qualRaw, a } = await writeQual(hard, job.writerModel, forwardEPS, qualMessages(hard));
+    let { qualRaw, a, growthOk } = await writeQual(hard, job.writerModel, forwardEPS, qualMessages(hard));
     job.writer = writerView(job.writerModel, a, 1, false); saveJob(job);
     let iterations = 0, resolved = false, reviews = [];
     while (true) {
@@ -254,8 +256,12 @@ async function runJob(job, hard, forwardEPS) {
       if (!hasIssues) { resolved = true; break; }
       if (iterations >= job.max_refine) break;
       job.phase = `writer đang sửa theo góp ý (vòng ${iterations + 1})`; saveJob(job);
-      try { ({ qualRaw, a } = await writeQual(hard, job.writerModel, forwardEPS, reviseMessages(hard, qualRaw, issues))); }
+      let rev;
+      try { rev = await writeQual(hard, job.writerModel, forwardEPS, reviseMessages(hard, qualRaw, issues)); }
       catch { break; }
+      // CHỐNG REGRESSION: chỉ nhận bản sửa nếu nó vẫn có nội dung định tính (không để bản rỗng ghi đè bản tốt).
+      if (!rev.growthOk) { job.refine_note = "Bản revise trả nội dung định tính rỗng → giữ bản trước, dừng refine."; saveJob(job); break; }
+      qualRaw = rev.qualRaw; a = rev.a;
       job.writer = writerView(job.writerModel, a, iterations + 1, true); saveJob(job);
     }
     job.resolved = resolved; job.warning = !resolved; job.status = "done"; job.phase = "hoàn tất"; job.ms = Date.now() - job._t0; saveJob(job);
