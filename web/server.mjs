@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { fetchHard, fetchHardYahoo, qualMessages, reviseMessages, buildCanonical, reviewMessages, metaMessages, parseJSONLoose } from "../scripts/research.mjs";
 import { analyze } from "../scripts/engine.mjs";
 import { computeDerived } from "../scripts/lib.mjs";
+import { computeLenses } from "../scripts/lenses.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -212,7 +213,8 @@ async function runMeta(model, ctx, rawFindings, max_tokens = 1200) {
 function quantOnly(hard, forwardEPS) {
   const canon = buildCanonical(hard, { forwardEPS, qualRaw: null, modelId: null });
   const d = computeDerived(canon);
-  return { forwardPE: d.headline.forwardPE, fy: d.headline.fy, cagr_pct: d.growth.cagr_pct, forwardPEG: d.pegForward?.value ?? null, vendor_pegTTM: d.peg_vendor_for_compare, flags: d.flags };
+  const lenses = (canon.valuation_inputs && typeof canon.valuation_inputs.market_cap === "number") ? computeLenses(canon) : [];
+  return { forwardPE: d.headline.forwardPE, fy: d.headline.fy, cagr_pct: d.growth.cagr_pct, forwardPEG: d.pegForward?.value ?? null, vendor_pegTTM: d.peg_vendor_for_compare, flags: d.flags, lenses };
 }
 
 const TICKER_RE = /^[A-Z][A-Z.\-]{0,6}$/;

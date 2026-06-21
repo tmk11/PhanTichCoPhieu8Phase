@@ -77,6 +77,14 @@ export async function fetchHardYahoo(ticker, { python, script, timeoutMs = 30000
       pe_ttm_vendor: j.pe_ttm != null ? prov({ value: j.pe_ttm, field: "peTTM" }) : null,
       beta: j.beta != null ? prov({ value: j.beta, field: "beta", note: "Không dùng để sàng lọc tăng trưởng." }) : null,
       eps_actual, company: j.company, sector: j.sector, fyeMonth: j.fye_month, lastActualFY,
+      vi: {
+        source: "Yahoo Finance (yfinance)", as_of: today, sector: j.sector, cf_period: j.cf_period ?? null,
+        market_cap: j.market_cap ?? null, enterprise_value: j.enterprise_value ?? null, ebitda: j.ebitda ?? null,
+        total_debt: j.total_debt ?? null, total_cash: j.total_cash ?? null,
+        revenue: j.revenue ?? null, revenue_growth: j.revenue_growth ?? null, shares: j.shares ?? null,
+        fcf_ttm: j.fcf_ttm ?? null, ocf_ttm: j.ocf_ttm ?? null,
+        capex_annual: j.capex_annual ?? null, dna_annual: j.dna_annual ?? null,
+      },
     },
   };
 }
@@ -240,6 +248,7 @@ export function buildCanonical(hard, { forwardEPS = {}, qualRaw = null, modelId 
     eps_forward,
     revenue_forward: [],
     fcf,
+    valuation_inputs: h.vi || {},
     fundamentals_aux: h.beta ? { beta: h.beta } : {},
     growth_runway,
     gaps: [

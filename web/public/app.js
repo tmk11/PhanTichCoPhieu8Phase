@@ -235,6 +235,17 @@ function renderJob(d) {
     <div>vendor pegTTM<b>${fmt(q.vendor_pegTTM)}</b></div>
   </div>`;
   html += `<div class="hint">✅ 4 chỉ số trên tính từ giá Yahoo + forward EPS bạn nhập (có ngay, không đợi AI).</div>`;
+  // Đa lăng kính định giá (deterministic, có ngay)
+  const LICON = { good: "🟢", neutral: "⚪", warn: "🟠", bad: "🔴", info: "🔵", gap: "⚪" };
+  const lenses = q.lenses || [];
+  if (lenses.length) {
+    html += `<div class="lens-wrap"><h4 style="margin:10px 0 4px">🔭 Đa lăng kính định giá (đừng nhìn PEG một mình)</h4><div class="lens-grid">`;
+    for (const l of lenses) {
+      const v = l.verdict === "gap" ? "GAP" : (l.value != null ? `${l.value}${l.unit || ""}` : "—");
+      html += `<div class="lens ${l.verdict}"><div class="lens-h">${LICON[l.verdict] || ""} ${l.label}</div><div class="lens-v">${v}</div><div class="lens-t">${escapeHtml(l.text || "")}</div></div>`;
+    }
+    html += `</div></div>`;
+  }
 
   // refine timeline (cập nhật dần) — hiện cả gộp meta
   if ((d.rounds || []).length) {

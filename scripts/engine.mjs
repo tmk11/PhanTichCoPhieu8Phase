@@ -1,6 +1,9 @@
 // engine.mjs — Hàm THUẦN dùng chung: render report + chạy guards (không I/O).
 // Dùng cho cả pipeline curated (build.mjs/verify.mjs) lẫn chạy on-demand đa-model.
 import { computeDerived, walkProvenance, round } from "./lib.mjs";
+import { computeLenses, lensContradiction } from "./lenses.mjs";
+
+const LENS_ICON = { good: "🟢", neutral: "⚪", warn: "🟠", bad: "🔴", info: "🔵", gap: "⚪" };
 
 const pct = (x) => (x === null || x === undefined ? "n/a" : `${round(x, 2)}%`);
 const money = (x) => (typeof x === "number" ? `${round(x / 1e9, 1)} tỷ USD` : x);
@@ -65,6 +68,22 @@ export function renderReport(c, d) {
   if (peg) M.push(`- **Forward PEG = ${round(d.headline.forwardPE, 2)} ÷ ${round(d.growth.cagr_pct, 2)} = ${peg.value}** (chia cho số phần-trăm-nguyên; method=${peg.method}).`);
   M.push(`- Đối chiếu vendor pegTTM = ${d.peg_vendor_for_compare} (Finnhub) — **không dùng để tính**; chỉ chứng minh số tự tính KHÁC số dựng sẵn.`);
   M.push(``);
+
+  // Đa lăng kính định giá (chỉ khi có dữ liệu định giá từ Yahoo — luồng chạy mã mới)
+  const lenses = (c.valuation_inputs && typeof c.valuation_inputs.market_cap === "number") ? computeLenses(c) : [];
+  if (lenses.length) {
+    M.push(`## 🔭 Đa lăng kính định giá (đừng nhìn PEG một mình)`);
+    const contra = lensContradiction(peg ? peg.value : null, lenses);
+    if (contra) M.push(`> 🔴 **MÂU THUẪN:** ${contra}`);
+    M.push(`| Lăng kính | Giá trị | Đánh giá | Diễn giải |`);
+    M.push(`|-----------|---------|----------|-----------|`);
+    for (const l of lenses) {
+      const v = l.verdict === "gap" ? "GAP" : (l.value != null ? `${l.value}${l.unit || ""}` : "—");
+      M.push(`| ${l.label} | ${v} | ${LENS_ICON[l.verdict] || ""} | ${l.text}${l.caveat ? ` *(${l.caveat})*` : ""} |`);
+    }
+    M.push(`\n*Nguồn số định giá: Yahoo Finance (yfinance). FCF âm KHÔNG mặc nhiên xấu — xem cặp FCF↔OCF và CapEx/D&A ở trên.*`);
+    M.push(``);
+  }
 
   M.push(`## 3. Caveat (đọc kỹ trước khi dùng số)`);
   if (userSourced) M.push(`- ✍️ **USER-SOURCED:** forward EPS do bạn nhập (TradingView) — PEG chỉ đúng khi số nhập đúng; phần định tính bên dưới do model sinh.`);

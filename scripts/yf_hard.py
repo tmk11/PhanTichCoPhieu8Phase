@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-# Lấy SỐ CỨNG từ Yahoo Finance (yfinance, keyless): giá, EPS TTM/PE/PEG vendor, beta,
-# và LỊCH SỬ EPS pha loãng theo năm. In ra JSON 1 dòng cho Node gọi.
+# Lấy SỐ CỨNG từ Yahoo (yfinance, keyless): giá, EPS TTM/PE/PEG vendor, beta, lịch sử EPS,
+# và INPUT cho đa-lăng-kính định giá: market cap, EV, EBITDA, FCF/OCF (TTM), CapEx & D&A (BCTC năm),
+# tổng nợ/tiền, doanh thu & tăng trưởng, số cổ phiếu, sector. In JSON 1 dòng.
 import sys, json, datetime
 
 def _num(x):
@@ -19,15 +20,11 @@ def main():
     t = yf.Ticker(sym)
 
     price = None
-    try:
-        price = _num(t.fast_info.last_price)
-    except Exception:
-        pass
+    try: price = _num(t.fast_info.last_price)
+    except Exception: pass
     info = {}
-    try:
-        info = t.info or {}
-    except Exception:
-        info = {}
+    try: info = t.info or {}
+    except Exception: info = {}
     if price is None:
         price = _num(info.get("currentPrice") or info.get("regularMarketPrice"))
     if not price:
@@ -51,12 +48,30 @@ def main():
                 fye_month = int(eps_actual[0]["period"][5:7])
     except Exception:
         pass
-
     if fye_month is None:
-        try:
-            fye_month = datetime.datetime.utcfromtimestamp(int(info.get("lastFiscalYearEnd"))).month
-        except Exception:
-            fye_month = 12
+        try: fye_month = datetime.datetime.utcfromtimestamp(int(info.get("lastFiscalYearEnd"))).month
+        except Exception: fye_month = 12
+
+    # ---- Input cho đa lăng kính ----
+    capex_annual = dna_annual = ocf_annual = fcf_annual = None
+    cf_period = None
+    try:
+        cf = t.cashflow
+        if cf is not None and len(cf.columns):
+            col = cf.columns[0]
+            cf_period = str(col.date() if hasattr(col, "date") else col)[:10]
+            def g(*names):
+                for n in names:
+                    if n in cf.index:
+                        v = _num(cf.loc[n, col])
+                        if v is not None: return v
+                return None
+            capex_annual = g("Capital Expenditure", "Capital Expenditures", "Capital Expenditure Reported")
+            dna_annual = g("Depreciation And Amortization", "Depreciation Amortization Depletion", "Reconciled Depreciation", "Depreciation")
+            ocf_annual = g("Operating Cash Flow", "Cash Flow From Continuing Operating Activities")
+            fcf_annual = g("Free Cash Flow")
+    except Exception:
+        pass
 
     today = datetime.date.today().isoformat()
     print(json.dumps({
@@ -70,6 +85,22 @@ def main():
         "sector": info.get("sector") or info.get("industry") or "?",
         "fye_month": fye_month,
         "eps_actual": eps_actual[:4],
+        # valuation inputs
+        "market_cap": _num(info.get("marketCap")),
+        "enterprise_value": _num(info.get("enterpriseValue")),
+        "ebitda": _num(info.get("ebitda")),
+        "total_debt": _num(info.get("totalDebt")),
+        "total_cash": _num(info.get("totalCash")),
+        "revenue": _num(info.get("totalRevenue")),
+        "revenue_growth": _num(info.get("revenueGrowth")),
+        "shares": _num(info.get("sharesOutstanding")),
+        "fcf_ttm": _num(info.get("freeCashflow")),
+        "ocf_ttm": _num(info.get("operatingCashflow")),
+        "capex_annual": (abs(capex_annual) if capex_annual is not None else None),
+        "dna_annual": (abs(dna_annual) if dna_annual is not None else None),
+        "ocf_annual": ocf_annual,
+        "fcf_annual": fcf_annual,
+        "cf_period": cf_period,
     }))
 
 main()
