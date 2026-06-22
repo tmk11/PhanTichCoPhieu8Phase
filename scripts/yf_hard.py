@@ -31,8 +31,10 @@ def main():
         print(json.dumps({"ok": False, "error": f"không có giá cho '{sym}' (mã không hợp lệ?)"})); return
 
     eps_actual, fye_month = [], None
+    ist = None
+    try: ist = t.income_stmt
+    except Exception: ist = None
     try:
-        ist = t.income_stmt
         row = None
         for label in ("Diluted EPS", "Basic EPS"):
             if ist is not None and label in ist.index:
@@ -52,9 +54,41 @@ def main():
         try: fye_month = datetime.datetime.utcfromtimestamp(int(info.get("lastFiscalYearEnd"))).month
         except Exception: fye_month = 12
 
+    def series(df, *names, n=5):
+        if df is None: return []
+        for nm in names:
+            if nm in df.index:
+                out = []
+                for col, val in df.loc[nm].items():
+                    v = _num(val)
+                    if v is None: continue
+                    d = str(col.date() if hasattr(col, "date") else col)[:10]
+                    out.append({"fy": int(d[:4]), "period": d, "value": round(v, 2)})
+                out.sort(key=lambda e: e["period"], reverse=True)
+                return out[:n]
+        return []
+
+    revenue_series = series(ist, "Total Revenue", "Operating Revenue")
+
+    # Biên lợi nhuận gộp & ròng theo năm (hiện tại + 2 năm gần đây)
+    def margins(*num_names):
+        rev = {e["fy"]: e["value"] for e in revenue_series}
+        num = series(ist, *num_names)
+        out = []
+        for e in num:
+            r = rev.get(e["fy"])
+            if r and r != 0:
+                out.append({"fy": e["fy"], "period": e["period"], "value": round(e["value"] / r * 100, 2)})
+        return out[:3]
+    gross_margin_series = margins("Gross Profit")
+    net_margin_series = margins("Net Income", "Net Income Common Stockholders",
+                                "Net Income Continuous Operations",
+                                "Net Income From Continuing Operation Net Minority Interest")
+
     # ---- Input cho đa lăng kính ----
     capex_annual = dna_annual = ocf_annual = fcf_annual = None
     cf_period = None
+    ocf_series = []
     try:
         cf = t.cashflow
         if cf is not None and len(cf.columns):
@@ -70,6 +104,7 @@ def main():
             dna_annual = g("Depreciation And Amortization", "Depreciation Amortization Depletion", "Reconciled Depreciation", "Depreciation")
             ocf_annual = g("Operating Cash Flow", "Cash Flow From Continuing Operating Activities")
             fcf_annual = g("Free Cash Flow")
+            ocf_series = series(cf, "Operating Cash Flow", "Cash Flow From Continuing Operating Activities")
     except Exception:
         pass
 
@@ -101,6 +136,10 @@ def main():
         "ocf_annual": ocf_annual,
         "fcf_annual": fcf_annual,
         "cf_period": cf_period,
+        "ocf_series": ocf_series,
+        "revenue_series": revenue_series,
+        "gross_margin_series": gross_margin_series,
+        "net_margin_series": net_margin_series,
     }))
 
 main()

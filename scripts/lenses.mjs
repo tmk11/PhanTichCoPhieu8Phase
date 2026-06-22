@@ -65,6 +65,55 @@ export function computeLenses(c, opts = {}) {
     add({ id: "capex_dna", label: "CapEx / D&A", value: r, verdict, text: text + cfP });
   }
 
+  // 2b) CapEx / OCF — bao nhiêu % dòng tiền hoạt động đang được tái đầu tư vào capex (TTM)
+  const capexTTM = (fcf != null && ocf != null) ? (ocf - fcf) : capex;
+  if (ocf == null || ocf === 0 || capexTTM == null) {
+    add({ id: "capex_ocf", label: "CapEx / OCF", verdict: "gap", text: "Thiếu CapEx hoặc OCF." });
+  } else {
+    const r = round(capexTTM / ocf * 100, 0);
+    let verdict = "neutral", text;
+    if (r > 100) { verdict = "info"; text = `CapEx/OCF = ${r}% (>100%): capex VƯỢT dòng tiền hoạt động ⇒ FCF âm — đầu tư rất mạnh (đọc kèm FCF↔OCF & CapEx/D&A để biết là tăng trưởng hay đốt tiền).`; }
+    else if (r >= 70) { text = `CapEx/OCF = ${r}%: tái đầu tư PHẦN LỚN dòng tiền hoạt động vào capex ⇒ FCF còn mỏng.`; }
+    else if (r >= 30) { text = `CapEx/OCF = ${r}%: tái đầu tư mức vừa phải, vẫn dư FCF.`; }
+    else { text = `CapEx/OCF = ${r}%: tái đầu tư nhẹ, dư nhiều dòng tiền tự do.`; }
+    add({ id: "capex_ocf", label: "CapEx / OCF", value: r, unit: "%", verdict, text });
+  }
+
+  // 2c) Tăng trưởng TRUNG BÌNH 3 năm: OCF & Doanh thu (CAGR)
+  const cagr3 = (ser) => {
+    if (!Array.isArray(ser) || ser.length < 2) return null;
+    const s = [...ser].sort((a, b) => a.fy - b.fy).slice(-4); // tối đa 4 điểm = 3 năm
+    const start = s[0].value, end = s[s.length - 1].value, yrs = s.length - 1;
+    if (!(start > 0) || !(end > 0) || yrs < 1) return null;
+    return { g: round((Math.pow(end / start, 1 / yrs) - 1) * 100, 1), yrs };
+  };
+  const og = cagr3(vi.ocf_series);
+  if (!og) add({ id: "ocf_cagr3", label: "OCF tăng TB 3 năm", verdict: "gap", text: "Thiếu chuỗi OCF nhiều năm (hoặc nền âm)." });
+  else add({ id: "ocf_cagr3", label: "OCF tăng TB 3 năm", value: og.g, unit: "%/năm", verdict: og.g >= 15 ? "good" : og.g >= 0 ? "neutral" : "warn",
+    text: `OCF (dòng tiền hoạt động) tăng trung bình ${og.g}%/năm trong ${og.yrs} năm gần nhất.` });
+  const rgw = cagr3(vi.revenue_series);
+  if (!rgw) add({ id: "rev_cagr3", label: "Doanh thu tăng TB 3 năm", verdict: "gap", text: "Thiếu chuỗi doanh thu nhiều năm." });
+  else add({ id: "rev_cagr3", label: "Doanh thu tăng TB 3 năm", value: rgw.g, unit: "%/năm", verdict: rgw.g >= 15 ? "good" : rgw.g >= 0 ? "neutral" : "warn",
+    text: `Doanh thu tăng trung bình ${rgw.g}%/năm trong ${rgw.yrs} năm gần nhất.` });
+
+  // 2d) Biên lợi nhuận GỘP & RÒNG: hiện tại + 2 năm gần đây (kèm xu hướng)
+  const marginLens = (id, label, ser) => {
+    const s = (Array.isArray(ser) ? ser : []).slice().sort((a, b) => b.fy - a.fy).slice(0, 3); // mới→cũ
+    if (!s.length) { add({ id, label, verdict: "gap", text: "Thiếu dữ liệu biên lợi nhuận." }); return; }
+    const cur = s[0].value;
+    const hist = s.map((e) => `${e.fy}: ${round(e.value, 1)}%`).join(" · ");
+    let verdict = "neutral", trend = "đi ngang";
+    if (s.length >= 2) {
+      const diff = s[0].value - s[s.length - 1].value;
+      if (diff > 1) { verdict = "good"; trend = "↑ cải thiện"; }
+      else if (diff < -1) { verdict = "warn"; trend = "↓ co lại"; }
+    }
+    if (cur < 0) verdict = "warn";
+    add({ id, label, value: round(cur, 1), unit: "%", verdict, text: `${label}: ${hist} (${trend}).` });
+  };
+  marginLens("gross_margin", "Biên LN gộp", vi.gross_margin_series);
+  marginLens("net_margin", "Biên LN ròng", vi.net_margin_series);
+
   // 3) EV / EBITDA
   if (!ev || !ebitda || ebitda <= 0) {
     add({ id: "ev_ebitda", label: "EV / EBITDA", verdict: "gap", text: "Thiếu EV hoặc EBITDA (hoặc EBITDA ≤ 0)." });
