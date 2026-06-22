@@ -299,16 +299,42 @@ async function loadHistory() {
   try {
     const d = await fetch("/api/history").then((r) => r.json());
     const list = d.jobs || [];
-    if (!list.length) return;
+    if (!list.length) {
+      $("#history-list").innerHTML = ""; $("#history-sec").hidden = true; $("#compare-sec").hidden = true; return;
+    }
     $("#history-sec").hidden = false;
-    $("#history-list").innerHTML = list.map((j) => {
+    const rows = list.map((j) => {
       const st = j.status === "running" ? "⏳" : j.warning ? "⚠️" : j.status === "error" ? "✗" : "✅";
       const t = j.ts ? new Date(j.ts).toLocaleString("vi-VN") : "";
-      return `<div class="hist-row" data-id="${j.id}"><span class="tk">${j.ticker}</span> <span>PEG ${fmt(j.forwardPEG)}</span> <span class="hint">${st} ${j.iterations || 0} vòng · ${t}</span></div>`;
+      return `<div class="hist-row" data-id="${j.id}"><span class="tk">${j.ticker}</span> <span>PEG ${fmt(j.forwardPEG)}</span> <span class="hint">${st} ${j.iterations || 0} vòng · ${t}</span><button class="hist-del" data-id="${j.id}" title="Xoá bản này">🗑</button></div>`;
     }).join("");
-    document.querySelectorAll(".hist-row").forEach((el) => { el.onclick = () => openJob(el.dataset.id); });
+    $("#history-list").innerHTML = `<div class="hist-tools"><button id="btn-clear-hist" class="ghost danger">🗑 Xoá tất cả lịch sử</button></div>` + rows;
+    document.querySelectorAll(".hist-row").forEach((el) => {
+      el.onclick = (e) => { if (e.target.classList.contains("hist-del")) return; openJob(el.dataset.id); };
+    });
+    document.querySelectorAll(".hist-del").forEach((b) => { b.onclick = (e) => { e.stopPropagation(); deleteOne(b.dataset.id); }; });
+    $("#btn-clear-hist").onclick = clearAllHistory;
     renderComparePicker(list);
   } catch { /* bỏ qua */ }
+}
+
+async function deleteOne(id) {
+  if (!confirm("Xoá bản phân tích này?")) return;
+  try {
+    await fetch("/api/job/" + encodeURIComponent(id), { method: "DELETE" });
+    if (localStorage.getItem(LS_CUR) === id) { localStorage.removeItem(LS_CUR); $("#run-results").innerHTML = ""; $("#run-status").textContent = ""; }
+    loadHistory();
+  } catch (e) { alert("Lỗi xoá: " + (e.message || e)); }
+}
+
+async function clearAllHistory() {
+  if (!confirm("Xoá TẤT CẢ lịch sử phân tích? Không thể hoàn tác.")) return;
+  try {
+    await fetch("/api/history", { method: "DELETE" });
+    localStorage.removeItem(LS_CUR); localStorage.removeItem(LS_WATCH);
+    $("#run-results").innerHTML = ""; $("#run-status").textContent = ""; $("#compare-out").innerHTML = "";
+    loadHistory();
+  } catch (e) { alert("Lỗi: " + (e.message || e)); }
 }
 
 const LS_WATCH = "sp_watch";

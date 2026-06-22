@@ -249,6 +249,17 @@ function listJobs(limit = 100) {
   } catch { return []; }
 }
 const newId = () => Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+function deleteJob(id) {
+  if (!/^[a-zA-Z0-9_-]{6,50}$/.test(id || "")) return false;
+  jobs.delete(id);
+  try { fs.unlinkSync(path.join(JOBS_DIR, id + ".json")); return true; } catch { return false; }
+}
+function clearJobs() {
+  let n = 0;
+  try { for (const f of fs.readdirSync(JOBS_DIR)) if (f.endsWith(".json")) { try { fs.unlinkSync(path.join(JOBS_DIR, f)); n++; } catch {} } } catch {}
+  jobs.clear();
+  return n;
+}
 
 // Chạy vòng refine ở NỀN, cập nhật job sau mỗi bước (frontend poll để xem tiến trình).
 async function runJob(job, hard, forwardEPS) {
@@ -339,7 +350,10 @@ const server = http.createServer(async (req, res) => {
         vendor_pegTTM: hard.hard.peg_ttm_vendor?.value ?? null, eps_ttm: hard.hard.eps_ttm?.value ?? null,
       });
     }
-    if (p === "/api/history") return sendJSON(res, 200, { jobs: listJobs() });
+    if (p === "/api/history") {
+      if (req.method === "DELETE") return sendJSON(res, 200, { cleared: clearJobs() });
+      return sendJSON(res, 200, { jobs: listJobs() });
+    }
     if (p === "/api/compare") {
       const compareRow = (j) => {
         const q = j.quant || {};
@@ -363,7 +377,9 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, { rows });
     }
     if (p.startsWith("/api/job/")) {
-      const j = getJob(decodeURIComponent(p.slice("/api/job/".length)));
+      const id = decodeURIComponent(p.slice("/api/job/".length));
+      if (req.method === "DELETE") return sendJSON(res, 200, { ok: deleteJob(id) });
+      const j = getJob(id);
       return j ? sendJSON(res, 200, jobPublic(j)) : sendJSON(res, 404, { error: "job không tồn tại" });
     }
     if (p === "/api/run" && req.method === "POST") {
