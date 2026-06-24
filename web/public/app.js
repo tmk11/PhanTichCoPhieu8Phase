@@ -189,6 +189,7 @@ async function runNew() {
   const ticker = HARD.ticker;
   const forwardEPS = collectEPS();
   if (!Object.keys(forwardEPS).length) { $("#run-status").textContent = "Hãy nhập forward EPS ít nhất 1 năm"; return; }
+  const ai = $("#ai-toggle").checked;
   const writer = $("#writer-model").value;
   const metaReviewer = $("#meta-model").value;
   const reviewers = pickedModels().filter((m) => m !== writer).slice(0, 6);
@@ -196,11 +197,11 @@ async function runNew() {
   $("#run-status").textContent = "Đang khởi tạo…";
   $("#run-results").innerHTML = "";
   try {
-    const d = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker, forwardEPS, writer, reviewers, metaReviewer }) }).then((r) => r.json());
+    const d = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker, forwardEPS, writer, reviewers, metaReviewer, ai }) }).then((r) => r.json());
     if (d.error) throw new Error(d.error);
     localStorage.setItem(LS_CUR, d.id);
-    renderJob(d);            // hiện ngay 4 chỉ số định lượng
-    startPolling(d.id);      // phân tích AI hiện dần
+    renderJob(d);            // hiện ngay 4 chỉ số định lượng + lăng kính
+    if (d.status === "running") startPolling(d.id); // chỉ poll khi có AI chạy nền
     loadHistory();
   } catch (e) { $("#run-status").textContent = "Lỗi: " + (e.message || e); }
   finally { $("#btn-run").disabled = false; }
@@ -225,7 +226,8 @@ function renderJob(d) {
   const running = d.status === "running";
   const epsUsed = Object.entries(d.forwardEPS || {}).map(([fy, v]) => `FY${fy}=${v}`).join(", ");
   const pegCls = q.forwardPEG != null ? (q.forwardPEG < 1 ? "cheap" : "rich") : "";
-  $("#run-status").textContent = running ? `⏳ ${d.phase || "đang chạy"}…` : (d.status === "error" ? "Lỗi: " + (d.error || "") : `✓ xong · ${d.ms ? (d.ms / 1000).toFixed(1) + "s" : ""}`);
+  const aiOff = d.ai === false;
+  $("#run-status").textContent = running ? `⏳ ${d.phase || "đang chạy"}…` : (d.status === "error" ? "Lỗi: " + (d.error || "") : aiOff ? "✓ đã lấy & lưu dữ liệu (AI tắt)" : `✓ xong · ${d.ms ? (d.ms / 1000).toFixed(1) + "s" : ""}`);
 
   let html = `<div class="run-head"><b>${d.ticker}</b> — ${d.company} · ${d.sector} · giá $${d.price} · forward EPS bạn nhập: <b>${epsUsed || "—"}</b></div>`;
   html += `<div class="quant-kpis">
@@ -258,7 +260,9 @@ function renderJob(d) {
     }).join(" → ") + (running ? ` <span class="round">…</span>` : "") + `</div>`;
   }
 
-  if (running) {
+  if (aiOff) {
+    html += `<div class="ok-box">🔕 <b>AI tắt</b> — chỉ hiển thị & lưu dữ liệu định lượng (giá, forward P/E, PEG, lăng kính). Không có phần writer/reviewer.</div>`;
+  } else if (running) {
     html += `<div class="ok-box">🧠 Phần phân tích AI đang chạy: <b>${d.phase || ""}</b>. Bạn có thể đóng tab — kết quả vẫn lưu, mở lại xem ở "Lịch sử".</div>`;
   } else if (d.status === "error") {
     html += `<div class="warn-box">Lỗi khi chạy phân tích: ${escapeHtml(d.error || "")}</div>`;
@@ -439,6 +443,12 @@ function mcard(r) {
 $("#btn-load").onclick = loadHard;
 $("#btn-run").onclick = runNew;
 $("#btn-compare").onclick = doCompare;
+$("#ai-toggle").addEventListener("change", (e) => {
+  const on = e.target.checked;
+  $("#btn-toggle-models").style.display = on ? "" : "none";
+  if (!on) $("#model-pick").hidden = true;
+  $("#btn-run").textContent = on ? "② Chạy" : "② Lấy & lưu dữ liệu";
+});
 $("#btn-toggle-models").onclick = () => { const e = $("#model-pick"); e.hidden = !e.hidden; };
 $("#new-ticker").addEventListener("keydown", (e) => { if (e.key === "Enter") loadHard(); });
 $("#pick-good").onclick = (e) => { e.preventDefault(); document.querySelectorAll("#model-list input").forEach((i) => (i.checked = GOOD_RE.test(i.value))); updatePickCount(); };

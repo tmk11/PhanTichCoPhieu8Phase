@@ -389,6 +389,7 @@ const server = http.createServer(async (req, res) => {
       const forwardEPS = parseForwardEPS(body.forwardEPS);
       if (!Object.keys(forwardEPS).length) return sendJSON(res, 400, { error: "Hãy nhập forward EPS ít nhất 1 năm (lấy từ TradingView)" });
       const writer = body.writer || DEFAULT_MODEL;
+      const aiEnabled = body.ai !== false; // tắt AI -> chỉ lấy & lưu dữ liệu
       let reviewers = Array.isArray(body.reviewers) ? body.reviewers.filter(Boolean) : [];
       reviewers = [...new Set(reviewers)].filter((r) => r !== writer).slice(0, MAX_MODELS);
       const metaModel = body.metaReviewer && String(body.metaReviewer).trim() ? String(body.metaReviewer).trim() : null;
@@ -404,13 +405,14 @@ const server = http.createServer(async (req, res) => {
         as_of: hard.as_of, forwardFYs: hard._forwardFYs, forwardEPS, quant,
         eps_actual: hard.hard.eps_actual.map((e) => ({ fy: e.fy, value: e.value })),
         vendor_pegTTM: hard.hard.peg_ttm_vendor?.value ?? null,
-        writerModel: writer, reviewerModels: reviewers, metaModel,
-        status: "running", phase: "writer đang viết phần định tính", iterations: 0,
+        writerModel: writer, reviewerModels: reviewers, metaModel, ai: aiEnabled,
+        status: aiEnabled ? "running" : "done", phase: aiEnabled ? "writer đang viết phần định tính" : "chỉ dữ liệu (AI tắt)", iterations: 0,
         rounds: [], writer: null, reviews: [], meta: null, consolidated: [], resolved: false, warning: false, max_refine: MAX_REFINE,
+        ms: aiEnabled ? undefined : 0,
       };
       saveJob(job);
-      runJob(job, hard, forwardEPS); // CHẠY NỀN — không await
-      return sendJSON(res, 200, jobPublic(job)); // trả ngay: có jobId + quant
+      if (aiEnabled) runJob(job, hard, forwardEPS); // CHẠY NỀN — không await
+      return sendJSON(res, 200, jobPublic(job)); // trả ngay: có jobId + quant (+lăng kính)
     }
     if (p.startsWith("/api/")) return sendJSON(res, 404, { error: "endpoint không tồn tại" });
 
