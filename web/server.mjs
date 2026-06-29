@@ -29,6 +29,23 @@ const YF_SCRIPT = path.join(ROOT, "scripts", "yf_hard.py");
 // Script lấy forward EPS từ TradingView (headless Chromium) — của user, ở ~/forward-eps
 const FWD_EPS_DIR = process.env.FWD_EPS_DIR || "/home/ubuntu/forward-eps";
 const FWD_EPS_PY = process.env.FWD_EPS_PY || path.join(FWD_EPS_DIR, ".venv/bin/python");
+// Cache forward EPS TradingView (mặc định 12h, lưu ra đĩa)
+const TV_CACHE_DIR = path.join(ROOT, "tvcache");
+try { fs.mkdirSync(TV_CACHE_DIR, { recursive: true }); } catch {}
+const TV_TTL_MS = (parseFloat(process.env.FWD_EPS_TTL_HOURS || "12")) * 3600e3;
+const tvMem = new Map();
+function tvCacheGet(ticker) {
+  const k = ticker.toUpperCase();
+  let e = tvMem.get(k);
+  if (!e) { try { e = JSON.parse(fs.readFileSync(path.join(TV_CACHE_DIR, k + ".json"), "utf8")); tvMem.set(k, e); } catch { return null; } }
+  if (!e || (Date.now() - e.ts) > TV_TTL_MS) return null;
+  return e;
+}
+function tvCacheSet(ticker, data) {
+  const k = ticker.toUpperCase(); const e = { ts: Date.now(), data };
+  tvMem.set(k, e);
+  try { fs.writeFileSync(path.join(TV_CACHE_DIR, k + ".json"), JSON.stringify(e)); } catch {}
+}
 function fetchTvForwardEPS(ticker) {
   return new Promise((resolve, reject) => {
     execFile(FWD_EPS_PY,
@@ -356,12 +373,18 @@ const server = http.createServer(async (req, res) => {
       const body = JSON.parse((await readBody(req)) || "{}");
       const ticker = String(body.ticker || "").toUpperCase().trim();
       if (!TICKER_RE.test(ticker)) return sendJSON(res, 400, { error: "Mã không hợp lệ" });
+      if (body.refresh !== true) {
+        const c = tvCacheGet(ticker);
+        if (c) return sendJSON(res, 200, { ...c.data, cached: true, age_min: Math.round((Date.now() - c.ts) / 60000) });
+      }
       try {
         const r = await fetchTvForwardEPS(ticker);
         if (r.error) return sendJSON(res, 502, { error: "TradingView: " + r.error });
         const byYear = {};
         (r.forward || []).forEach((f) => { if (f.eps != null && /^20\d\d$/.test(String(f.tv_year))) byYear[String(f.tv_year)] = f.eps; });
-        return sendJSON(res, 200, { ticker: r.ticker, price: r.price ?? null, exchange: r.exchange ?? null, source: r.source ?? "TradingView", forward: r.forward || [], byYear });
+        const data = { ticker: r.ticker, price: r.price ?? null, exchange: r.exchange ?? null, source: r.source ?? "TradingView", forward: r.forward || [], byYear };
+        tvCacheSet(ticker, data);
+        return sendJSON(res, 200, { ...data, cached: false, age_min: 0 });
       } catch (e) { return sendJSON(res, 502, { error: "Lấy forward EPS lỗi: " + String(e.message || e) }); }
     }
     if (p === "/api/hard" && req.method === "POST") {
