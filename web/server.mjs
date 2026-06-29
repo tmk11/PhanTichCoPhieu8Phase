@@ -9,6 +9,7 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { execFile } from "node:child_process";
 import { fetchHard, fetchHardYahoo, qualMessages, reviseMessages, buildCanonical, reviewMessages, metaMessages, parseJSONLoose } from "../scripts/research.mjs";
 import { analyze } from "../scripts/engine.mjs";
 import { computeDerived } from "../scripts/lib.mjs";
@@ -25,6 +26,21 @@ const RUBRIC = JSON.parse(fs.readFileSync(path.join(ROOT, "done.rubric.json"), "
 const DATA_SOURCE = process.env.DATA_SOURCE || (FINNHUB_KEY ? "finnhub" : "yahoo");
 const PYTHON_BIN = process.env.PYTHON_BIN || path.join(ROOT, ".venv/bin/python");
 const YF_SCRIPT = path.join(ROOT, "scripts", "yf_hard.py");
+// Script lấy forward EPS từ TradingView (headless Chromium) — của user, ở ~/forward-eps
+const FWD_EPS_DIR = process.env.FWD_EPS_DIR || "/home/ubuntu/forward-eps";
+const FWD_EPS_PY = process.env.FWD_EPS_PY || path.join(FWD_EPS_DIR, ".venv/bin/python");
+function fetchTvForwardEPS(ticker) {
+  return new Promise((resolve, reject) => {
+    execFile(FWD_EPS_PY,
+      ["-c", "import json,sys; from tv_forecast_eps import get_tv_forecast_eps; print(json.dumps(get_tv_forecast_eps(sys.argv[1])))", ticker],
+      { cwd: FWD_EPS_DIR, timeout: 110000, maxBuffer: 4e6 },
+      (err, stdout, stderr) => {
+        if (err && !stdout) return reject(new Error(String(stderr || err.message).slice(0, 300)));
+        const line = (stdout || "").trim().split("\n").filter(Boolean).pop();
+        try { resolve(JSON.parse(line)); } catch { reject(new Error("Không parse được output script: " + String(line || stderr || "").slice(0, 200))); }
+      });
+  });
+}
 async function fetchHardData(ticker) {
   return DATA_SOURCE === "finnhub"
     ? fetchHard(ticker, FINNHUB_KEY, { signal: AbortSignal.timeout(20000) })
@@ -335,6 +351,18 @@ const server = http.createServer(async (req, res) => {
       const t0 = Date.now();
       const content = await routerChat({ model, messages, temperature: body.temperature ?? 0.3 });
       return sendJSON(res, 200, { model, ms: Date.now() - t0, content });
+    }
+    if (p === "/api/forward-eps" && req.method === "POST") {
+      const body = JSON.parse((await readBody(req)) || "{}");
+      const ticker = String(body.ticker || "").toUpperCase().trim();
+      if (!TICKER_RE.test(ticker)) return sendJSON(res, 400, { error: "Mã không hợp lệ" });
+      try {
+        const r = await fetchTvForwardEPS(ticker);
+        if (r.error) return sendJSON(res, 502, { error: "TradingView: " + r.error });
+        const byYear = {};
+        (r.forward || []).forEach((f) => { if (f.eps != null && /^20\d\d$/.test(String(f.tv_year))) byYear[String(f.tv_year)] = f.eps; });
+        return sendJSON(res, 200, { ticker: r.ticker, price: r.price ?? null, exchange: r.exchange ?? null, source: r.source ?? "TradingView", forward: r.forward || [], byYear });
+      } catch (e) { return sendJSON(res, 502, { error: "Lấy forward EPS lỗi: " + String(e.message || e) }); }
     }
     if (p === "/api/hard" && req.method === "POST") {
       const body = JSON.parse((await readBody(req)) || "{}");

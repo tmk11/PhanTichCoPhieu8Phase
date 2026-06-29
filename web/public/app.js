@@ -175,6 +175,26 @@ async function loadHard() {
   finally { $("#btn-load").disabled = false; }
 }
 
+async function fetchTvEps() {
+  if (!HARD) { $("#tv-status").textContent = "Bấm ① Lấy dữ liệu trước"; return; }
+  const btn = $("#btn-tv-eps"); btn.disabled = true;
+  $("#tv-status").textContent = "⏳ đang lấy forward EPS từ TradingView (~15s)…";
+  try {
+    const d = await fetch("/api/forward-eps", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticker: HARD.ticker }) }).then((r) => r.json());
+    if (d.error) throw new Error(d.error);
+    const inputs = [...document.querySelectorAll("#eps-inputs input")];
+    let matched = 0;
+    inputs.forEach((i) => { const v = (d.byYear || {})[i.dataset.fy]; if (v != null) { i.value = v; matched++; } });
+    if (matched === 0) { // năm TV không khớp năm Yahoo -> điền theo thứ tự
+      const fwd = (d.forward || []).filter((f) => f.eps != null);
+      inputs.forEach((i, idx) => { if (fwd[idx]) { i.value = fwd[idx].eps; matched++; } });
+    }
+    const list = (d.forward || []).filter((f) => f.eps != null).map((f) => `${f.tv_year}:${f.eps}`).join(" · ");
+    $("#tv-status").innerHTML = matched ? `✓ đã điền ${matched} năm từ TradingView (giá TV $${d.price ?? "?"}). <span class="hint">${list} · nguồn Reuters/Refinitiv — chỉnh tay nếu muốn.</span>` : "Không lấy được forward EPS (trang TV chưa render hoặc mã lạ).";
+  } catch (e) { $("#tv-status").textContent = "Lỗi: " + (e.message || e); }
+  finally { btn.disabled = false; }
+}
+
 function collectEPS() {
   const m = {};
   document.querySelectorAll("#eps-inputs input").forEach((i) => { const v = parseFloat(i.value); if (isFinite(v)) m[i.dataset.fy] = v; });
@@ -442,6 +462,7 @@ function mcard(r) {
 
 $("#btn-load").onclick = loadHard;
 $("#btn-run").onclick = runNew;
+$("#btn-tv-eps").onclick = fetchTvEps;
 $("#btn-compare").onclick = doCompare;
 $("#ai-toggle").addEventListener("change", (e) => {
   const on = e.target.checked;
