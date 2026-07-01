@@ -188,8 +188,18 @@ async function fetchTvEps(force = false) {
     const fwd = (d.forward || []).filter((f) => f.eps != null);
     let matched = 0; const pairs = [];
     inputs.forEach((i, idx) => { if (fwd[idx]) { i.value = fwd[idx].eps; matched++; pairs.push(`FY${i.dataset.fy} ← ${fwd[idx].eps} (TV ${fwd[idx].label})`); } });
+    // Revision consensus: so với lần lấy TRƯỚC (chỉ hiện khi số đã đổi) — estimate revision momentum.
+    let revHtml = "";
+    if (d.revisions && (d.revisions.changes || []).length) {
+      const since = d.revisions.since ? new Date(d.revisions.since).toLocaleDateString("vi-VN") : "?";
+      const items = d.revisions.changes.map((c) => {
+        const up = c.pct != null && c.pct > 0;
+        return `FY${c.fy}: ${c.from} → ${c.to} (<span class="${up ? "cheap" : "rich"}">${up ? "▲+" : "▼"}${c.pct}%</span>)`;
+      }).join(" · ");
+      revHtml = `<br><span class="rev-note">📊 <b>Consensus ĐỔI</b> so với lần lấy trước (${since}): ${items} — analyst đang ${d.revisions.changes.every((c) => c.pct > 0) ? "NÂNG" : d.revisions.changes.every((c) => c.pct < 0) ? "HẠ" : "điều chỉnh"} dự phóng.</span>`;
+    }
     $("#tv-status").innerHTML = matched
-      ? `✓ đã điền ${matched} năm theo thứ tự FY+1..FY+${matched} · giá TV $${d.price ?? "?"} · ${d.cached ? `📦 cache (${age})` : "vừa lấy"} <a href="#" id="tv-refresh">🔄 làm mới</a><br><span class="hint">${pairs.join(" · ")} — nguồn Reuters/Refinitiv (TradingView). Chỉnh tay nếu cần.</span>`
+      ? `✓ đã điền ${matched} năm theo thứ tự FY+1..FY+${matched} · giá TV $${d.price ?? "?"} · ${d.cached ? `📦 cache (${age})` : "vừa lấy"} <a href="#" id="tv-refresh">🔄 làm mới</a><br><span class="hint">${pairs.join(" · ")} — nguồn Reuters/Refinitiv (TradingView). Chỉnh tay nếu cần.</span>${revHtml}`
       : "Không lấy được forward EPS (trang TV chưa render hoặc mã lạ).";
     const rf = $("#tv-refresh"); if (rf) rf.onclick = (e) => { e.preventDefault(); fetchTvEps(true); };
   } catch (e) { $("#tv-status").textContent = "Lỗi: " + (e.message || e); }
@@ -400,6 +410,8 @@ function renderCompare(rows) {
     ["forward PEG", (r) => `${r.forwardPEG === minPeg ? "⭐ " : ""}${pegCell(r.forwardPEG)}`],
     ["vendor pegTTM", (r) => fmt(r.vendor_pegTTM)],
     ["🟢/🟠 FCF yield", (r) => { const c = lc(r, "fcf_yield"); return `<span class="lc ${c.cls}">${c.v}</span>`; }],
+    ["SBC / doanh thu", (r) => { const c = lc(r, "sbc_rev"); return `<span class="lc ${c.cls}">${c.v}</span>`; }],
+    ["FCF yield sau SBC", (r) => { const c = lc(r, "fcf_yield_ex_sbc"); return `<span class="lc ${c.cls}">${c.v}</span>`; }],
     ["CapEx / D&A", (r) => { const c = lc(r, "capex_dna"); return `<span class="lc ${c.cls}">${c.v}</span>`; }],
     ["EV / EBITDA", (r) => { const c = lc(r, "ev_ebitda"); return `<span class="lc ${c.cls}">${c.v}</span>`; }],
     ["Reverse-DCF (g ngầm)", (r) => { const c = lc(r, "reverse_dcf"); return `<span class="lc ${c.cls}">${c.v}</span>`; }],

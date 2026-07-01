@@ -2,3 +2,4 @@
 jobruns/
 tvcache/
 web/.env
+__pycache__/

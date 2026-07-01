@@ -14,6 +14,7 @@ import { fetchHard, fetchHardYahoo, qualMessages, reviseMessages, buildCanonical
 import { analyze } from "../scripts/engine.mjs";
 import { computeDerived } from "../scripts/lib.mjs";
 import { computeLenses } from "../scripts/lenses.mjs";
+import { appendIfChanged, diffLatest } from "../scripts/revisions.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -45,6 +46,22 @@ function tvCacheSet(ticker, data) {
   const k = ticker.toUpperCase(); const e = { ts: Date.now(), data };
   tvMem.set(k, e);
   try { fs.writeFileSync(path.join(TV_CACHE_DIR, k + ".json"), JSON.stringify(e)); } catch {}
+}
+// Lịch sử revision forward EPS: mỗi lần consensus TV ĐỔI, ghi 1 dòng vào tvcache/<T>-history.jsonl.
+const tvHistPath = (t) => path.join(TV_CACHE_DIR, t.toUpperCase() + "-history.jsonl");
+function tvHistRead(ticker) {
+  try {
+    return fs.readFileSync(tvHistPath(ticker), "utf8").split("\n").filter(Boolean)
+      .map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+  } catch { return []; }
+}
+function tvHistRecord(ticker, data) {
+  const entry = { ts: new Date().toISOString(), price: data.price ?? null, byYear: data.byYear || {} };
+  const { history, appended } = appendIfChanged(tvHistRead(ticker), entry);
+  if (appended) {
+    try { fs.writeFileSync(tvHistPath(ticker), history.map((e) => JSON.stringify(e)).join("\n") + "\n"); } catch {}
+  }
+  return history;
 }
 function fetchTvForwardEPS(ticker) {
   return new Promise((resolve, reject) => {
@@ -375,7 +392,7 @@ const server = http.createServer(async (req, res) => {
       if (!TICKER_RE.test(ticker)) return sendJSON(res, 400, { error: "Mã không hợp lệ" });
       if (body.refresh !== true) {
         const c = tvCacheGet(ticker);
-        if (c) return sendJSON(res, 200, { ...c.data, cached: true, age_min: Math.round((Date.now() - c.ts) / 60000) });
+        if (c) return sendJSON(res, 200, { ...c.data, cached: true, age_min: Math.round((Date.now() - c.ts) / 60000), revisions: diffLatest(tvHistRead(ticker)) });
       }
       try {
         const r = await fetchTvForwardEPS(ticker);
@@ -384,7 +401,8 @@ const server = http.createServer(async (req, res) => {
         (r.forward || []).forEach((f) => { if (f.eps != null && /^20\d\d$/.test(String(f.tv_year))) byYear[String(f.tv_year)] = f.eps; });
         const data = { ticker: r.ticker, price: r.price ?? null, exchange: r.exchange ?? null, source: r.source ?? "TradingView", forward: r.forward || [], byYear };
         tvCacheSet(ticker, data);
-        return sendJSON(res, 200, { ...data, cached: false, age_min: 0 });
+        const hist = tvHistRecord(ticker, data);
+        return sendJSON(res, 200, { ...data, cached: false, age_min: 0, revisions: diffLatest(hist) });
       } catch (e) { return sendJSON(res, 502, { error: "Lấy forward EPS lỗi: " + String(e.message || e) }); }
     }
     if (p === "/api/hard" && req.method === "POST") {
@@ -400,6 +418,12 @@ const server = http.createServer(async (req, res) => {
         eps_actual: hard.hard.eps_actual.map((e) => ({ fy: e.fy, value: e.value })),
         vendor_pegTTM: hard.hard.peg_ttm_vendor?.value ?? null, eps_ttm: hard.hard.eps_ttm?.value ?? null,
       });
+    }
+    if (p.startsWith("/api/eps-history/")) {
+      const ticker = decodeURIComponent(p.slice("/api/eps-history/".length)).toUpperCase();
+      if (!TICKER_RE.test(ticker)) return sendJSON(res, 400, { error: "Mã không hợp lệ" });
+      const history = tvHistRead(ticker);
+      return sendJSON(res, 200, { ticker, history, revisions: diffLatest(history) });
     }
     if (p === "/api/history") {
       if (req.method === "DELETE") return sendJSON(res, 200, { cleared: clearJobs() });

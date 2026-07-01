@@ -86,7 +86,7 @@ def main():
                                 "Net Income From Continuing Operation Net Minority Interest")
 
     # ---- Input cho đa lăng kính ----
-    capex_annual = dna_annual = ocf_annual = fcf_annual = None
+    capex_annual = dna_annual = ocf_annual = fcf_annual = sbc_annual = None
     cf_period = None
     ocf_series = []
     try:
@@ -104,6 +104,7 @@ def main():
             dna_annual = g("Depreciation And Amortization", "Depreciation Amortization Depletion", "Reconciled Depreciation", "Depreciation")
             ocf_annual = g("Operating Cash Flow", "Cash Flow From Continuing Operating Activities")
             fcf_annual = g("Free Cash Flow")
+            sbc_annual = g("Stock Based Compensation")
             ocf_series = series(cf, "Operating Cash Flow", "Cash Flow From Continuing Operating Activities")
     except Exception:
         pass
@@ -135,6 +136,7 @@ def main():
         "dna_annual": (abs(dna_annual) if dna_annual is not None else None),
         "ocf_annual": ocf_annual,
         "fcf_annual": fcf_annual,
+        "sbc_annual": (abs(sbc_annual) if sbc_annual is not None else None),
         "cf_period": cf_period,
         "ocf_series": ocf_series,
         "revenue_series": revenue_series,

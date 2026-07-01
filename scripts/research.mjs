@@ -84,6 +84,7 @@ export async function fetchHardYahoo(ticker, { python, script, timeoutMs = 30000
         revenue: j.revenue ?? null, revenue_growth: j.revenue_growth ?? null, shares: j.shares ?? null,
         fcf_ttm: j.fcf_ttm ?? null, ocf_ttm: j.ocf_ttm ?? null,
         capex_annual: j.capex_annual ?? null, dna_annual: j.dna_annual ?? null,
+        sbc_annual: j.sbc_annual ?? null,
         ocf_series: j.ocf_series || [], revenue_series: j.revenue_series || [],
         gross_margin_series: j.gross_margin_series || [], net_margin_series: j.net_margin_series || [],
       },
