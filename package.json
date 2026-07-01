@@ -1,0 +1,11 @@
+{
+  "name": "phantichcophieu8phase",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "start": "node web/server.mjs",
+    "pipeline": "node scripts/orchestrate.mjs"
+  }
+}

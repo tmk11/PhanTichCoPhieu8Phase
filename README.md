@@ -20,6 +20,11 @@ node scripts/build.mjs  NVDA      # ráp report
 node scripts/verify.mjs NVDA      # verifier tự tính lại + guards (exit 0/1)
 ```
 
+Test (unit test cho `computeDerived`, `parseJSONLoose`, `computeLenses`, guards G1–G8; CI chạy trên GitHub Actions):
+```bash
+npm test
+```
+
 ## Cấu trúc
 ```
 data/<T>-canonical.json     # dữ liệu thô có provenance {value,source,url,as_of_date,field,tier} — single source of truth
@@ -65,6 +70,13 @@ Bản FAIL được giữ tại `artifacts/verifier-report-<T>.g1corrupt.failed.
 - `CAGR = (EPS_cuối / EPS_đầu)^(1/số_năm) − 1`
 - `forward PEG = forward_P/E[FY1] ÷ (CAGR × 100)` — chia cho **số phần trăm nguyên** (vd 33.4), KHÔNG chia 0.334.
 - Sàng tăng trưởng dựa trên **forward EPS/revenue estimate**, KHÔNG dùng beta.
+
+## Web dashboard (`web/`)
+Dashboard chạy on-demand cho mã bất kỳ: lấy số cứng (Yahoo/Finnhub), tự điền forward EPS từ TradingView (cache 12h),
+writer + reviewers song song + meta-reviewer với vòng refine, đa lăng kính định giá (FCF yield, **FCF yield sau SBC**,
+**SBC/doanh thu**, CapEx/D&A, EV/EBITDA, reverse-DCF, Rule of 40), watchlist so sánh nhiều mã, lịch sử job bền vững.
+Mỗi lần consensus TradingView **đổi**, app ghi vào `tvcache/<T>-history.jsonl` và hiện **revision** (FY, từ→đến, %)
+— xem thêm `GET /api/eps-history/<T>`. Triển khai: xem `web/DEPLOY.md`.
 
 ## Nguồn dữ liệu
 Finnhub MCP (giá, EPS TTM/quá khứ, pegTTM vendor để đối chứng), Alpha Vantage `EARNINGS_ESTIMATES`

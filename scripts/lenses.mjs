@@ -53,6 +53,41 @@ export function computeLenses(c, opts = {}) {
     }
   }
 
+  // 1b) SBC (stock-based compensation): SBC/doanh thu + FCF yield SAU SBC.
+  // SBC được cộng ngược vào OCF (không tốn tiền mặt) nên FCF "đẹp" hơn thực chất —
+  // nhưng cổ đông trả chi phí đó bằng PHA LOÃNG. Đây là lỗ hổng lớn nhất của FCF yield thô ở công ty tech.
+  const sbc = num("sbc_annual");
+  if (sbc == null || !rev) {
+    add({ id: "sbc_rev", label: "SBC / doanh thu", verdict: "gap", text: "Thiếu SBC hoặc doanh thu." });
+  } else {
+    const r = round(sbc / rev * 100, 1);
+    const verdict = r < 3 ? "good" : r <= 10 ? "neutral" : "warn";
+    add({ id: "sbc_rev", label: "SBC / doanh thu", value: r, unit: "%", verdict,
+      text: `SBC (trả lương bằng cổ phiếu) = ${B(sbc)} ≈ ${r}% doanh thu. ${r < 3 ? "Thấp — pha loãng không đáng kể." : r <= 10 ? "Mức thường gặp ở công ty tech — nên trừ hao khi đọc FCF." : "CAO — pha loãng cổ đông đáng kể; FCF 'đẹp' một phần nhờ chi phí này không tốn tiền mặt."}`,
+      caveat: "SBC từ BCTC năm gần nhất" });
+  }
+  if (sbc == null || fcf == null || !mc) {
+    add({ id: "fcf_yield_ex_sbc", label: "FCF yield sau SBC", verdict: "gap", text: "Thiếu SBC, FCF hoặc vốn hóa." });
+  } else {
+    const adj = fcf - sbc;
+    const y = pct(adj / mc * 100);
+    let verdict, text;
+    if (adj < 0 && fcf >= 0) {
+      verdict = "warn";
+      text = `FCF sau SBC ÂM (${B(adj)}) dù FCF thô dương (${B(fcf)}) ⇒ nếu tính SBC như chi phí thật thì KHÔNG còn dòng tiền tự do — cổ đông đang trả phần đó bằng pha loãng.`;
+    } else if (y >= 4) {
+      verdict = "good";
+      text = `FCF yield sau SBC = ${y}% ((FCF ${B(fcf)} − SBC ${B(sbc)}) / vốn hóa ${B(mc)}) — vẫn sinh tiền tốt kể cả khi coi SBC là chi phí thật.`;
+    } else {
+      verdict = adj < 0 ? "bad" : "neutral";
+      text = adj < 0
+        ? `FCF sau SBC ÂM (${B(adj)}) và FCF thô cũng ÂM — dòng tiền yếu cả trước lẫn sau SBC.`
+        : `FCF yield sau SBC = ${y}% (thô: ${pct(fcf / mc * 100)}%) — phần chênh chính là SBC.`;
+    }
+    add({ id: "fcf_yield_ex_sbc", label: "FCF yield sau SBC", value: y, unit: "%", verdict, text,
+      caveat: "FCF TTM trừ SBC năm gần nhất (lệch kỳ nhẹ)" });
+  }
+
   // 2) CapEx / D&A — phân biệt growth vs maintenance vs dưới-đầu-tư
   if (capex == null || dna == null || dna === 0) {
     add({ id: "capex_dna", label: "CapEx / D&A", verdict: "gap", text: "Thiếu CapEx hoặc D&A." });
